@@ -1,0 +1,145 @@
+{
+  "categories": [
+    {
+      "name": "User Experience",
+      "description": "Aspects related to how users interact with the product",
+      "criteria": [
+        {
+          "name": "Usability",
+          "description": "How easy is the product to use? Consider the learning curve, user interface, and overall user experience.",
+          "weight": 3,
+          "prompt_template": "Evaluate the usability of this product. Consider user interface design, learning curve, documentation quality, navigational structure, and overall user experience. Provide specific strengths and weaknesses based on the available information. Specifically look for mentions of: ease of use, intuitive design, navigation flows, discoverability of features, accessibility, help resources, common user complaints, and onboarding experience."
+        },
+        {
+          "name": "User Interface",
+          "description": "Quality of the visual and interaction design of the product",
+          "weight": 2,
+          "prompt_template": "Evaluate the user interface design of this product. Consider visual design, layout, consistency, information hierarchy, interaction patterns, responsiveness, and aesthetic appeal. Identify specific strengths and weaknesses mentioned in the product information. Look for details about: design system, component patterns, mobile vs. desktop experiences, use of white space, typography, color scheme, and visual clarity."
+        }
+      ]
+    },
+    {
+      "name": "Technical",
+      "description": "Technical aspects of the product",
+      "criteria": [
+        {
+          "name": "Performance",
+          "description": "How well does the product perform its intended functions? Consider speed, efficiency, and resource usage.",
+          "weight": 3,
+          "prompt_template": "Assess the performance characteristics of this product. Consider factors like speed, efficiency, scalability, and resource usage. Identify any performance limitations or strengths mentioned in the documentation or reviews. Look specifically for information about: response times, loading speeds, computational resource requirements, handling of concurrent users/operations, performance under load, optimization features, caching strategies, and any benchmarks or metrics provided."
+        },
+        {
+          "name": "Security",
+          "description": "How secure is the product? Consider data protection, compliance, and security features.",
+          "weight": 3,
+          "prompt_template": "Evaluate the security aspects of this product. Consider data protection measures, compliance certifications, encryption, authentication, authorization controls, and security history. Identify specific security features or potential concerns. Look for information about: encryption methods, authentication options (MFA, SSO), authorization models, data protection practices, security certifications (SOC, ISO, etc.), vulnerability management, security update frequency, and any history of security incidents."
+        },
+        {
+          "name": "Integration",
+          "description": "How easily does the product integrate with other tools and platforms?",
+          "weight": 2,
+          "prompt_template": "Evaluate how well this product integrates with other tools and platforms. Consider APIs, webhooks, plugins, extensibility, and compatibility with common technologies. Identify specific integrations mentioned and any integration limitations. Specifically look for information about: API quality and documentation, available SDKs, supported integration patterns, webhooks, data import/export capabilities, available plugins or extensions, marketplace offerings, and compatibility with industry standards."
+        },
+        {
+          "name": "Scalability",
+          "description": "How well does the product scale with increased usage or load?",
+          "weight": 2,
+          "prompt_template": "Assess how well this product scales as usage grows. Consider performance under load, architectural limitations, handling of large data volumes, and documented scaling capabilities. Identify any scaling limitations or advantages mentioned. Look for information about: infrastructure requirements, horizontal vs. vertical scaling options, multi-tenancy support, clustering capabilities, caching mechanisms, handling of large datasets, performance degradation patterns, pricing implications of scaling, and any customer testimonials regarding scale."
+        },
+        {
+          "name": "Reliability",
+          "description": "How reliable and stable is the product? Consider uptime, error handling, and recovery capabilities.",
+          "weight": 3,
+          "prompt_template": "Evaluate the reliability and stability of this product. Consider factors like uptime guarantees, error handling, fault tolerance, backup and recovery capabilities, and overall robustness. Look for information about: SLAs, historical uptime performance, handling of edge cases, error reporting mechanisms, disaster recovery features, failover capabilities, redundancy options, data durability guarantees, and customer feedback regarding stability."
+        }
+      ]
+    },
+    {
+      "name": "Support",
+      "description": "Support and documentation aspects",
+      "criteria": [
+        {
+          "name": "Documentation",
+          "description": "How comprehensive and helpful is the product's documentation?",
+          "weight": 2,
+          "prompt_template": "Evaluate the quality and comprehensiveness of this product's documentation. Consider factors like clarity, completeness, examples, tutorials, and accessibility. Identify strengths and gaps in the documentation. Specifically look for information about: getting started guides, API references, example code, tutorials, conceptual explanations, troubleshooting guides, search functionality, content organization, multilingual support, and community contributions to documentation."
+        },
+        {
+          "name": "Community & Support",
+          "description": "What level of community engagement and official support is available?",
+          "weight": 2,
+          "prompt_template": "Assess the community and support ecosystem around this product. Consider factors like official support channels, response times, community size, forum activity, third-party resources, and overall helpfulness. Identify the strengths and limitations of the support available. Look for information about: support tiers, SLAs for responses, knowledge base quality, community forums, Stack Overflow presence, official Discord/Slack channels, user groups, conferences or meetups, training resources, and consulting services availability."
+        }
+      ]
+    },
+    {
+      "name": "Business",
+      "description": "Business and commercial aspects",
+      "criteria": [
+        {
+          "name": "Pricing",
+          "description": "Is the pricing model fair and competitive for the value provided?",
+          "weight": 3,
+          "prompt_template": "Assess the pricing model and value proposition of this product. Consider factors like pricing structure, tiers, free plans, pricing compared to competitors, and overall value for money. Identify any limitations or benefits of the pricing approach. Look specifically for: pricing tiers and what's included in each, free tier limitations, hidden costs, pricing predictability, cost scaling with usage, enterprise pricing, discounts for commitments, pricing relative to competitors, and overall value delivered per dollar spent."
+        },
+        {
+          "name": "Vendor Reputation",
+          "description": "How reputable and stable is the vendor providing the product?",
+          "weight": 2,
+          "prompt_template": "Evaluate the reputation and stability of the vendor behind this product. Consider factors like company history, market position, financial stability, leadership, community perception, and commitment to the product. Look for information about: company founding date, funding status, revenue or profitability indicators, employee growth, leadership team background, product roadmap transparency, acquisition history, customer testimonials about the vendor (not just the product), and any concerning patterns in the vendor's behavior."
+        },
+        {
+          "name": "Product Maturity",
+          "description": "How mature and established is the product in the market?",
+          "weight": 2,
+          "prompt_template": "Assess the maturity level of this product in the market. Consider factors like time since initial release, feature completeness, stability, rate of innovation, market adoption, and ecosystem development. Look for information about: version history, major feature additions over time, user base size or growth, enterprise adoption, market share, industry recognition or awards, reference customers, breadth of use cases supported, and third-party ecosystem development (plugins, extensions, integrations)."
+        }
+      ]
+    },
+    {
+      "name": "Innovation",
+      "description": "Innovative aspects of the product",
+      "criteria": [
+        {
+          "name": "Unique Features",
+          "description": "What unique or differentiating features does the product offer?",
+          "weight": 2,
+          "prompt_template": "Identify and evaluate the unique or differentiating features of this product compared to alternatives. Consider what novel capabilities it offers that set it apart from competitors, and how well these features address user needs. Look for information about: proprietary technologies, novel approaches to common problems, features not found in competing products, unique combinations of features, special optimizations or capabilities, and overall innovation in the product category."
+        },
+        {
+          "name": "Future Potential",
+          "description": "What is the product's future potential and roadmap?",
+          "weight": 1,
+          "prompt_template": "Assess the future potential and evolution of this product. Consider factors like the published roadmap, innovation pace, adaptation to emerging trends, and commitment to ongoing development. Look for information about: future feature announcements, technology adoption patterns, responsiveness to industry trends, research and development investments, beta features, experimental capabilities, major upcoming releases, and how the vendor positions the product's future direction."
+        }
+      ]
+    }
+  ],
+  "product_types": [
+    {
+      "name": "Development Tool",
+      "description": "Tools used directly by developers in the development process",
+      "relevant_criteria": ["Usability", "Performance", "Integration", "Documentation", "Community & Support", "Pricing"]
+    },
+    {
+      "name": "Infrastructure",
+      "description": "Infrastructure and platform services",
+      "relevant_criteria": ["Reliability", "Scalability", "Security", "Performance", "Pricing", "Documentation"]
+    },
+    {
+      "name": "SaaS Product",
+      "description": "Software-as-a-Service applications",
+      "relevant_criteria": ["Usability", "User Interface", "Security", "Reliability", "Integration", "Pricing", "Vendor Reputation"]
+    },
+    {
+      "name": "API Service",
+      "description": "API-based services consumed by applications",
+      "relevant_criteria": ["Documentation", "Performance", "Reliability", "Scalability", "Security", "Pricing", "Integration"]
+    },
+    {
+      "name": "Framework/Library",
+      "description": "Development frameworks and libraries",
+      "relevant_criteria": ["Performance", "Documentation", "Community & Support", "Integration", "Product Maturity", "Unique Features"]
+    }
+  ]
+}

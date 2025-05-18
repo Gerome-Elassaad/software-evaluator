@@ -1,0 +1,34 @@
+# Core dependencies
+fastapi==0.103.1
+uvicorn==0.23.2
+pydantic==2.3.0
+sqlalchemy==2.0.20
+alembic==1.12.0
+python-dotenv==1.0.0
+bcrypt==4.0.1
+pyjwt==2.8.0
+python-multipart==0.0.6
+jinja2==3.1.2
+aiofiles==23.2.1
+
+# AI and NLP tools
+google-generativeai==0.3.1
+google-cloud-language==2.11.0
+openai==0.28.0
+langchain==0.0.267
+beautifulsoup4==4.12.2
+requests==2.31.0
+trafilatura==1.6.1
+
+# Vector database and embeddings
+sentence-transformers==2.2.2
+chromadb==0.4.13
+
+# Testing
+pytest==7.4.0
+httpx==0.24.1
+
+# Development utilities
+black==23.7.0
+isort==5.12.0
+flake8==6.1.0

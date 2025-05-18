@@ -1,0 +1,54 @@
+{
+  "name": "product-evaluator",
+  "version": "0.1.0",
+  "description": "AI-powered product evaluation tool for software developers and founders",
+  "main": "index.js",
+  "scripts": {
+    "build:css": "npx tailwindcss -i ./src/css/input.css -o ./product_evaluator/static/css/main.css",
+    "watch:css": "npx tailwindcss -i ./src/css/input.css -o ./product_evaluator/static/css/main.css --watch",
+    "lint:js": "eslint ./product_evaluator/static/js",
+    "format:js": "prettier --write ./product_evaluator/static/js",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Gerome-Elassaad/product-evaluator.git"
+  },
+  "keywords": [
+    "ai",
+    "product",
+    "evaluation",
+    "decision",
+    "tool",
+    "fastapi",
+    "python"
+  ],
+  "author": "Your Name <your.email@example.com>",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/Gerome-Elassaad/product-evaluator/issues"
+  },
+  "homepage": "https://github.com/Gerome-Elassaad/product-evaluator#readme",
+  "devDependencies": {
+    "autoprefixer": "^10.4.16",
+    "eslint": "^8.56.0",
+    "eslint-config-prettier": "^9.1.0",
+    "postcss": "^8.4.32",
+    "prettier": "^3.1.1",
+    "tailwindcss": "^3.4.0"
+  },
+  "dependencies": {
+    "chart.js": "^4.4.1",
+    "htmx.org": "^1.9.10"
+  },
+  "engines": {
+    "node": ">=18.0.0",
+    "npm": ">=9.0.0"
+  },
+  "private": true,
+  "browserslist": [
+    "> 1%",
+    "last 2 versions",
+    "not dead"
+  ]
+}
