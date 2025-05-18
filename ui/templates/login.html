@@ -1,0 +1,94 @@
+{% extends "base.html" %}
+
+{% block title %}{{ app_name }} - Login{% endblock %}
+
+{% block content %}
+<div class="max-w-md mx-auto bg-white p-8 rounded-lg shadow-lg">
+    <h1 class="text-2xl font-bold text-center text-indigo-800 mb-6">Login</h1>
+    
+    <div id="error-alert" class="hidden bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
+        <span id="error-message"></span>
+    </div>
+    
+    <form id="login-form" class="space-y-4">
+        <div>
+            <label for="username" class="block text-gray-700 font-medium mb-2">Username or Email</label>
+            <input type="text" id="username" name="username" required 
+                   class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500">
+        </div>
+        
+        <div>
+            <label for="password" class="block text-gray-700 font-medium mb-2">Password</label>
+            <input type="password" id="password" name="password" required 
+                   class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500">
+        </div>
+        
+        <div>
+            <button type="submit" id="login-button" class="w-full bg-indigo-600 text-white py-2 px-4 rounded-lg hover:bg-indigo-700 transition">
+                <span id="login-text">Login</span>
+                <span id="login-spinner" class="loading hidden"></span>
+            </button>
+        </div>
+    </form>
+    
+    <div class="mt-6 text-center">
+        <p class="text-gray-600">Don't have an account? <a href="/register" class="text-indigo-600 hover:text-indigo-800">Sign up</a></p>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    // Check if user is already logged in
+    document.addEventListener('DOMContentLoaded', () => {
+        redirectIfAuthenticated();
+    });
+
+    // Handle login form submission
+    document.getElementById('login-form').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        
+        // Get form data
+        const username = document.getElementById('username').value;
+        const password = document.getElementById('password').value;
+        
+        // Show loading state
+        const loginButton = document.getElementById('login-button');
+        const loginText = document.getElementById('login-text');
+        const loginSpinner = document.getElementById('login-spinner');
+        const errorAlert = document.getElementById('error-alert');
+        const errorMessage = document.getElementById('error-message');
+        
+        loginButton.disabled = true;
+        loginText.classList.add('hidden');
+        loginSpinner.classList.remove('hidden');
+        errorAlert.classList.add('hidden');
+        
+        try {
+            // Create form data for submission
+            const formData = new FormData();
+            formData.append('username', username);
+            formData.append('password', password);
+            
+            // Call login API
+            const response = await API.postForm('/auth/token', formData);
+            
+            // Save auth token and user info
+            localStorage.setItem('auth_token', response.access_token);
+            localStorage.setItem('user_info', JSON.stringify(response.user));
+            
+            // Redirect to home page
+            window.location.href = '/';
+        } catch (error) {
+            // Show error message
+            errorMessage.textContent = error.message || 'Login failed. Please check your credentials.';
+            errorAlert.classList.remove('hidden');
+            
+            // Reset button
+            loginButton.disabled = false;
+            loginText.classList.remove('hidden');
+            loginSpinner.classList.add('hidden');
+        }
+    });
+</script>
+{% endblock %}

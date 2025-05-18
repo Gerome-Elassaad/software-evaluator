@@ -1,0 +1,805 @@
+{% extends "base.html" %}
+
+{% block title %}{{ app_name }} - Products{% endblock %}
+
+{% block content %}
+<div class="mb-8">
+    <h1 class="text-3xl font-bold text-indigo-800 mb-2">Products</h1>
+    <p class="text-gray-600">Browse products or add a new one for evaluation.</p>
+</div>
+
+<!-- Filters and Search -->
+<div class="mb-6 bg-white p-4 rounded-lg shadow-sm">
+    <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+        <div class="flex-1">
+            <div class="relative">
+                <input type="text" id="search-input" placeholder="Search products..." 
+                       class="w-full pl-10 pr-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                    <i class="fas fa-search text-gray-400"></i>
+                </div>
+            </div>
+        </div>
+        
+        <div class="flex flex-col sm:flex-row gap-3">
+            <select id="category-filter" class="border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                <option value="">All Categories</option>
+                <!-- Categories will be populated by JavaScript -->
+            </select>
+            
+            <select id="vendor-filter" class="border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                <option value="">All Vendors</option>
+                <!-- Vendors will be populated by JavaScript -->
+            </select>
+            
+            <button id="add-product-button" class="bg-indigo-600 text-white py-2 px-4 rounded-lg hover:bg-indigo-700 transition flex items-center justify-center">
+                <i class="fas fa-plus mr-2"></i> Add Product
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- Products List -->
+<div id="products-container" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+    <!-- Products will be populated by JavaScript -->
+    <div id="loading-products" class="col-span-full text-center py-12">
+        <div class="inline-block w-8 h-8 border-4 border-indigo-600 border-t-transparent rounded-full animate-spin"></div>
+        <p class="mt-2 text-gray-600">Loading products...</p>
+    </div>
+</div>
+
+<!-- No Products Message -->
+<div id="no-products-message" class="hidden text-center py-12">
+    <div class="bg-indigo-50 p-6 rounded-lg inline-block">
+        <div class="text-indigo-600 text-5xl mb-4">
+            <i class="fas fa-box-open"></i>
+        </div>
+        <h3 class="text-xl font-semibold mb-2">No Products Found</h3>
+        <p class="text-gray-600 mb-4">Get started by adding your first product for evaluation.</p>
+        <button id="empty-add-product-button" class="bg-indigo-600 text-white py-2 px-4 rounded hover:bg-indigo-700 transition">
+            <i class="fas fa-plus mr-2"></i> Add Product
+        </button>
+    </div>
+</div>
+
+<!-- Add/Edit Product Modal -->
+<div id="product-modal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+    <div class="bg-white rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+        <div class="p-6 border-b">
+            <div class="flex justify-between items-center">
+                <h2 class="text-2xl font-bold text-indigo-800" id="modal-title">Add Product</h2>
+                <button id="close-modal-button" class="text-gray-500 hover:text-gray-700">
+                    <i class="fas fa-times text-xl"></i>
+                </button>
+            </div>
+        </div>
+        
+        <div class="p-6">
+            <div id="modal-error" class="hidden bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
+                <span id="modal-error-message"></span>
+            </div>
+            
+            <form id="product-form" class="space-y-4">
+                <input type="hidden" id="product-id">
+                
+                <div>
+                    <label for="product-name" class="block text-gray-700 font-medium mb-2">Product Name *</label>
+                    <input type="text" id="product-name" required
+                           class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                </div>
+                
+                <div>
+                    <label for="product-url" class="block text-gray-700 font-medium mb-2">Website URL</label>
+                    <input type="url" id="product-url" 
+                           class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                </div>
+                
+                <div class="flex items-center mb-4">
+                    <input type="checkbox" id="extract-content" class="mr-2">
+                    <label for="extract-content" class="text-gray-700">
+                        Extract content from URL
+                        <span class="tooltip ml-1">
+                            <i class="fas fa-info-circle text-indigo-500"></i>
+                            <span class="tooltip-text">This will use AI to extract information about the product from the website.</span>
+                        </span>
+                    </label>
+                </div>
+                
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <label for="product-category" class="block text-gray-700 font-medium mb-2">Category</label>
+                        <select id="product-category" 
+                                class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                            <option value="">Select Category</option>
+                            <option value="Development Tool">Development Tool</option>
+                            <option value="Infrastructure">Infrastructure</option>
+                            <option value="SaaS Product">SaaS Product</option>
+                            <option value="API Service">API Service</option>
+                            <option value="Framework/Library">Framework/Library</option>
+                            <option value="Other">Other</option>
+                        </select>
+                    </div>
+                    
+                    <div>
+                        <label for="product-vendor" class="block text-gray-700 font-medium mb-2">Vendor</label>
+                        <input type="text" id="product-vendor" 
+                               class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                    </div>
+                </div>
+                
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <label for="product-version" class="block text-gray-700 font-medium mb-2">Version</label>
+                        <input type="text" id="product-version" 
+                               class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                    </div>
+                    
+                    <div>
+                        <label for="product-price" class="block text-gray-700 font-medium mb-2">Price</label>
+                        <input type="number" id="product-price" min="0" step="0.01" 
+                               class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                    </div>
+                </div>
+                
+                <div>
+                    <label for="product-pricing-model" class="block text-gray-700 font-medium mb-2">Pricing Model</label>
+                    <select id="product-pricing-model" 
+                            class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                        <option value="">Select Pricing Model</option>
+                        <option value="free">Free</option>
+                        <option value="freemium">Freemium</option>
+                        <option value="subscription">Subscription</option>
+                        <option value="one-time">One-time Purchase</option>
+                        <option value="usage-based">Usage-based</option>
+                        <option value="other">Other</option>
+                    </select>
+                </div>
+                
+                <div>
+                    <label for="product-description" class="block text-gray-700 font-medium mb-2">Description</label>
+                    <textarea id="product-description" rows="4" 
+                              class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"></textarea>
+                </div>
+                
+                <div class="pt-4 flex justify-end gap-3">
+                    <button type="button" id="cancel-product-button" 
+                            class="border border-gray-300 text-gray-700 py-2 px-4 rounded-lg hover:bg-gray-100 transition">
+                        Cancel
+                    </button>
+                    <button type="submit" id="save-product-button" 
+                            class="bg-indigo-600 text-white py-2 px-4 rounded-lg hover:bg-indigo-700 transition">
+                        <span id="save-product-text">Save Product</span>
+                        <span id="save-product-spinner" class="loading hidden"></span>
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Product Detail Modal -->
+<div id="detail-modal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+    <div class="bg-white rounded-lg shadow-xl max-w-4xl w-full max-h-[90vh] overflow-y-auto">
+        <div class="p-6 border-b">
+            <div class="flex justify-between items-center">
+                <h2 class="text-2xl font-bold text-indigo-800" id="detail-title">Product Details</h2>
+                <button id="close-detail-button" class="text-gray-500 hover:text-gray-700">
+                    <i class="fas fa-times text-xl"></i>
+                </button>
+            </div>
+        </div>
+        
+        <div class="p-6" id="detail-content">
+            <!-- Product details will be populated by JavaScript -->
+            <div class="animate-pulse">
+                <div class="h-6 bg-gray-200 rounded w-3/4 mb-4"></div>
+                <div class="h-4 bg-gray-200 rounded w-full mb-2"></div>
+                <div class="h-4 bg-gray-200 rounded w-full mb-2"></div>
+                <div class="h-4 bg-gray-200 rounded w-5/6 mb-6"></div>
+                
+                <div class="grid grid-cols-2 gap-4 mb-6">
+                    <div class="h-10 bg-gray-200 rounded"></div>
+                    <div class="h-10 bg-gray-200 rounded"></div>
+                    <div class="h-10 bg-gray-200 rounded"></div>
+                    <div class="h-10 bg-gray-200 rounded"></div>
+                </div>
+                
+                <div class="h-4 bg-gray-200 rounded w-full mb-2"></div>
+                <div class="h-4 bg-gray-200 rounded w-full mb-2"></div>
+                <div class="h-4 bg-gray-200 rounded w-full mb-2"></div>
+                <div class="h-4 bg-gray-200 rounded w-2/3"></div>
+            </div>
+        </div>
+        
+        <div class="p-6 border-t bg-gray-50">
+            <div class="flex justify-between">
+                <div>
+                    <button id="edit-product-button" class="bg-indigo-600 text-white py-2 px-4 rounded-lg hover:bg-indigo-700 transition mr-2">
+                        <i class="fas fa-edit mr-1"></i> Edit
+                    </button>
+                    <button id="delete-product-button" class="bg-red-600 text-white py-2 px-4 rounded-lg hover:bg-red-700 transition">
+                        <i class="fas fa-trash-alt mr-1"></i> Delete
+                    </button>
+                </div>
+                
+                <button id="evaluate-product-button" class="bg-green-600 text-white py-2 px-4 rounded-lg hover:bg-green-700 transition">
+                    <i class="fas fa-clipboard-check mr-1"></i> Evaluate
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Delete Confirmation Modal -->
+<div id="delete-modal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+    <div class="bg-white rounded-lg shadow-xl max-w-md w-full">
+        <div class="p-6">
+            <h2 class="text-xl font-bold text-gray-800 mb-4">Confirm Deletion</h2>
+            <p class="text-gray-600 mb-6">Are you sure you want to delete this product? This action cannot be undone.</p>
+            
+            <div class="flex justify-end gap-3">
+                <button id="cancel-delete-button" 
+                        class="border border-gray-300 text-gray-700 py-2 px-4 rounded-lg hover:bg-gray-100 transition">
+                    Cancel
+                </button>
+                <button id="confirm-delete-button" 
+                        class="bg-red-600 text-white py-2 px-4 rounded-lg hover:bg-red-700 transition">
+                    <span id="delete-text">Delete</span>
+                    <span id="delete-spinner" class="loading hidden"></span>
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    // Check if user is authenticated
+    document.addEventListener('DOMContentLoaded', () => {
+        if (!requireAuth()) return;
+        
+        // Load products
+        loadProducts();
+        
+        // Load filter options
+        loadFilterOptions();
+    });
+    
+    // Global variables
+    let allProducts = [];
+    let currentProductId = null;
+    
+    // Event Listeners
+    document.getElementById('add-product-button').addEventListener('click', showAddProductModal);
+    document.getElementById('empty-add-product-button').addEventListener('click', showAddProductModal);
+    document.getElementById('close-modal-button').addEventListener('click', hideProductModal);
+    document.getElementById('cancel-product-button').addEventListener('click', hideProductModal);
+    document.getElementById('product-form').addEventListener('submit', saveProduct);
+    document.getElementById('close-detail-button').addEventListener('click', hideDetailModal);
+    document.getElementById('search-input').addEventListener('input', filterProducts);
+    document.getElementById('category-filter').addEventListener('change', filterProducts);
+    document.getElementById('vendor-filter').addEventListener('change', filterProducts);
+    document.getElementById('cancel-delete-button').addEventListener('click', hideDeleteModal);
+    document.getElementById('confirm-delete-button').addEventListener('click', deleteProduct);
+    
+    // Load products from API
+    async function loadProducts() {
+        try {
+            const products = await API.get('/products');
+            allProducts = products;
+            
+            // Display products
+            displayProducts(products);
+        } catch (error) {
+            console.error('Error loading products:', error);
+            showToast('Failed to load products', 'error');
+            
+            // Hide loading indicator
+            document.getElementById('loading-products').classList.add('hidden');
+            
+            // Show empty state
+            document.getElementById('no-products-message').classList.remove('hidden');
+        }
+    }
+    
+    // Load filter options
+    async function loadFilterOptions() {
+        try {
+            // Get categories
+            const categories = await API.get('/products/categories/list');
+            const categoryFilter = document.getElementById('category-filter');
+            
+            categories.forEach(category => {
+                const option = document.createElement('option');
+                option.value = category;
+                option.textContent = category;
+                categoryFilter.appendChild(option);
+            });
+            
+            // Get vendors
+            const vendors = await API.get('/products/vendors/list');
+            const vendorFilter = document.getElementById('vendor-filter');
+            
+            vendors.forEach(vendor => {
+                const option = document.createElement('option');
+                option.value = vendor;
+                option.textContent = vendor;
+                vendorFilter.appendChild(option);
+            });
+        } catch (error) {
+            console.error('Error loading filter options:', error);
+        }
+    }
+    
+    // Display products in grid
+    function displayProducts(products) {
+        const container = document.getElementById('products-container');
+        const loadingIndicator = document.getElementById('loading-products');
+        const noProductsMessage = document.getElementById('no-products-message');
+        
+        // Hide loading indicator
+        loadingIndicator.classList.add('hidden');
+        
+        // Clear container (except loading indicator)
+        while (container.firstChild) {
+            container.removeChild(container.firstChild);
+        }
+        
+        // Show no products message if empty
+        if (products.length === 0) {
+            noProductsMessage.classList.remove('hidden');
+            return;
+        } else {
+            noProductsMessage.classList.add('hidden');
+        }
+        
+        // Add product cards
+        products.forEach(product => {
+            const card = document.createElement('div');
+            card.className = 'bg-white rounded-lg shadow-md overflow-hidden hover:shadow-lg transition';
+            card.innerHTML = `
+                <div class="p-6">
+                    <div class="flex justify-between items-start">
+                        <h3 class="text-lg font-bold text-indigo-800 mb-2">${escapeHtml(product.name)}</h3>
+                        <span class="text-xs font-semibold text-white bg-indigo-600 px-2 py-1 rounded">
+                            ${escapeHtml(product.category || 'Uncategorized')}
+                        </span>
+                    </div>
+                    <p class="text-gray-600 text-sm mb-4 line-clamp-2">${escapeHtml(product.description || 'No description available.')}</p>
+                    
+                    <div class="flex items-center text-sm text-gray-500 mb-4">
+                        <span class="mr-3"><i class="fas fa-building mr-1"></i> ${escapeHtml(product.vendor || 'Unknown')}</span>
+                        ${product.version ? `<span><i class="fas fa-code-branch mr-1"></i> ${escapeHtml(product.version)}</span>` : ''}
+                    </div>
+                    
+                    <div class="flex justify-between items-center">
+                        <div>
+                            ${product.price ? `
+                                <span class="text-green-700 font-semibold">
+                                    $${product.price.toFixed(2)}
+                                    ${product.pricing_model ? `<span class="text-xs text-gray-500">(${formatPricingModel(product.pricing_model)})</span>` : ''}
+                                </span>
+                            ` : `
+                                <span class="text-gray-500 text-sm">
+                                    ${product.pricing_model ? formatPricingModel(product.pricing_model) : 'Price not specified'}
+                                </span>
+                            `}
+                        </div>
+                        
+                        <div class="flex items-center text-sm">
+                            <span class="text-amber-600 mr-3">
+                                <i class="fas fa-star mr-1"></i>
+                                ${product.average_rating ? product.average_rating.toFixed(1) : 'N/A'}
+                            </span>
+                            <span class="text-indigo-600">
+                                <i class="fas fa-clipboard-check mr-1"></i>
+                                ${product.evaluation_count}
+                            </span>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="bg-gray-50 px-6 py-3 flex justify-between">
+                    <button class="view-button text-indigo-600 hover:text-indigo-800" data-id="${product.id}">
+                        <i class="fas fa-eye mr-1"></i> View
+                    </button>
+                    <button class="evaluate-button text-green-600 hover:text-green-800" data-id="${product.id}">
+                        <i class="fas fa-clipboard-check mr-1"></i> Evaluate
+                    </button>
+                </div>
+            `;
+            
+            container.appendChild(card);
+            
+            // Add event listeners to buttons
+            card.querySelector('.view-button').addEventListener('click', () => viewProductDetails(product.id));
+            card.querySelector('.evaluate-button').addEventListener('click', () => evaluateProduct(product.id));
+        });
+    }
+    
+    // Filter products based on search and filters
+    function filterProducts() {
+        const searchTerm = document.getElementById('search-input').value.toLowerCase();
+        const categoryFilter = document.getElementById('category-filter').value;
+        const vendorFilter = document.getElementById('vendor-filter').value;
+        
+        const filteredProducts = allProducts.filter(product => {
+            // Apply search filter
+            const matchesSearch = 
+                !searchTerm || 
+                (product.name && product.name.toLowerCase().includes(searchTerm)) ||
+                (product.description && product.description.toLowerCase().includes(searchTerm)) ||
+                (product.vendor && product.vendor.toLowerCase().includes(searchTerm));
+            
+            // Apply category filter
+            const matchesCategory = !categoryFilter || product.category === categoryFilter;
+            
+            // Apply vendor filter
+            const matchesVendor = !vendorFilter || product.vendor === vendorFilter;
+            
+            return matchesSearch && matchesCategory && matchesVendor;
+        });
+        
+        // Display filtered products
+        displayProducts(filteredProducts);
+    }
+    
+    // Show add product modal
+    function showAddProductModal() {
+        // Reset form
+        document.getElementById('product-form').reset();
+        document.getElementById('product-id').value = '';
+        document.getElementById('modal-title').textContent = 'Add Product';
+        document.getElementById('modal-error').classList.add('hidden');
+        
+        // Show modal
+        document.getElementById('product-modal').classList.remove('hidden');
+    }
+    
+    // Hide product modal
+    function hideProductModal() {
+        document.getElementById('product-modal').classList.add('hidden');
+    }
+    
+    // Save product
+    async function saveProduct(e) {
+        e.preventDefault();
+        
+        // Get form data
+        const productId = document.getElementById('product-id').value;
+        const name = document.getElementById('product-name').value;
+        const websiteUrl = document.getElementById('product-url').value;
+        const extractContent = document.getElementById('extract-content').checked;
+        const category = document.getElementById('product-category').value;
+        const vendor = document.getElementById('product-vendor').value;
+        const version = document.getElementById('product-version').value;
+        const price = document.getElementById('product-price').value;
+        const pricingModel = document.getElementById('product-pricing-model').value;
+        const description = document.getElementById('product-description').value;
+        
+        // Show loading state
+        const saveButton = document.getElementById('save-product-button');
+        const saveText = document.getElementById('save-product-text');
+        const saveSpinner = document.getElementById('save-product-spinner');
+        const errorElement = document.getElementById('modal-error');
+        const errorMessage = document.getElementById('modal-error-message');
+        
+        saveButton.disabled = true;
+        saveText.classList.add('hidden');
+        saveSpinner.classList.remove('hidden');
+        errorElement.classList.add('hidden');
+        
+        try {
+            // Prepare product data
+            const productData = {
+                name,
+                website_url: websiteUrl || undefined,
+                extract_content: extractContent,
+                category: category || undefined,
+                vendor: vendor || undefined,
+                version: version || undefined,
+                price: price ? parseFloat(price) : undefined,
+                pricing_model: pricingModel || undefined,
+                description: description || undefined
+            };
+            
+            let response;
+            
+            if (productId) {
+                // Update existing product
+                response = await API.put(`/products/${productId}`, productData);
+            } else {
+                // Create new product
+                response = await API.post('/products', productData);
+            }
+            
+            // Hide modal
+            hideProductModal();
+            
+            // Reload products
+            await loadProducts();
+            
+            // Show success message
+            showToast(`Product ${productId ? 'updated' : 'created'} successfully`, 'success');
+        } catch (error) {
+            // Show error message
+            errorMessage.textContent = error.message || `Failed to ${productId ? 'update' : 'create'} product`;
+            errorElement.classList.remove('hidden');
+        } finally {
+            // Reset button
+            saveButton.disabled = false;
+            saveText.classList.remove('hidden');
+            saveSpinner.classList.add('hidden');
+        }
+    }
+    
+    // View product details
+    async function viewProductDetails(productId) {
+        try {
+            // Get product details
+            const product = await API.get(`/products/${productId}`);
+            
+            // Store current product ID
+            currentProductId = productId;
+            
+            // Update detail modal
+            document.getElementById('detail-title').textContent = product.name;
+            
+            const content = document.getElementById('detail-content');
+            content.innerHTML = `
+                <div class="mb-6">
+                    ${product.website_url ? `
+                        <a href="${product.website_url}" target="_blank" class="text-indigo-600 hover:text-indigo-800 mb-2 inline-block">
+                            <i class="fas fa-external-link-alt mr-1"></i> ${escapeHtml(product.website_url)}
+                        </a>
+                    ` : ''}
+                    
+                    <p class="text-gray-700 mt-2">${escapeHtml(product.description || 'No description available.')}</p>
+                </div>
+                
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4 mb-6">
+                    <div>
+                        <h3 class="text-sm font-semibold text-gray-500 uppercase">Category</h3>
+                        <p class="mt-1">${escapeHtml(product.category || 'Not specified')}</p>
+                    </div>
+                    
+                    <div>
+                        <h3 class="text-sm font-semibold text-gray-500 uppercase">Vendor</h3>
+                        <p class="mt-1">${escapeHtml(product.vendor || 'Not specified')}</p>
+                    </div>
+                    
+                    <div>
+                        <h3 class="text-sm font-semibold text-gray-500 uppercase">Version</h3>
+                        <p class="mt-1">${escapeHtml(product.version || 'Not specified')}</p>
+                    </div>
+                    
+                    <div>
+                        <h3 class="text-sm font-semibold text-gray-500 uppercase">Price</h3>
+                        <p class="mt-1">
+                            ${product.price ? `$${product.price.toFixed(2)}` : 'Not specified'}
+                            ${product.pricing_model ? ` (${formatPricingModel(product.pricing_model)})` : ''}
+                        </p>
+                    </div>
+                </div>
+                
+                <div class="mb-6">
+                    <h3 class="text-lg font-semibold text-indigo-800 mb-2">Evaluation Summary</h3>
+                    
+                    <div class="flex items-center mb-3">
+                        <div class="mr-4 flex items-center">
+                            <span class="text-2xl font-bold text-amber-600 mr-2">
+                                ${product.average_rating ? product.average_rating.toFixed(1) : 'N/A'}
+                            </span>
+                            <div class="text-amber-400">
+                                ${getStarRating(product.average_rating || 0)}
+                            </div>
+                        </div>
+                        
+                        <span class="text-gray-600">
+                            <i class="fas fa-clipboard-check mr-1"></i>
+                            ${product.evaluation_count} evaluation${product.evaluation_count !== 1 ? 's' : ''}
+                        </span>
+                    </div>
+                    
+                    ${product.evaluation_count > 0 ? `
+                        <button id="view-evaluations-button" class="text-indigo-600 hover:text-indigo-800">
+                            <i class="fas fa-list-ul mr-1"></i> View all evaluations
+                        </button>
+                    ` : `
+                        <p class="text-gray-600">No evaluations yet. Be the first to evaluate this product!</p>
+                    `}
+                </div>
+                
+                ${product.extracted_content ? `
+                    <div>
+                        <h3 class="text-lg font-semibold text-indigo-800 mb-2">Extracted Content</h3>
+                        <div class="bg-gray-50 p-4 rounded-lg max-h-60 overflow-y-auto text-sm text-gray-800">
+                            ${formatExtractedContent(product.extracted_content)}
+                        </div>
+                    </div>
+                ` : ''}
+            `;
+            
+            // Add event listener to view evaluations button
+            const viewEvaluationsButton = document.getElementById('view-evaluations-button');
+            if (viewEvaluationsButton) {
+                viewEvaluationsButton.addEventListener('click', () => {
+                    window.location.href = `/evaluations?product_id=${productId}`;
+                });
+            }
+            
+            // Add event listeners for action buttons
+            document.getElementById('edit-product-button').addEventListener('click', () => editProduct(product));
+            document.getElementById('delete-product-button').addEventListener('click', showDeleteModal);
+            document.getElementById('evaluate-product-button').addEventListener('click', () => evaluateProduct(productId));
+            
+            // Show detail modal
+            document.getElementById('detail-modal').classList.remove('hidden');
+        } catch (error) {
+            console.error('Error loading product details:', error);
+            showToast('Failed to load product details', 'error');
+        }
+    }
+    
+    // Hide detail modal
+    function hideDetailModal() {
+        document.getElementById('detail-modal').classList.add('hidden');
+    }
+    
+    // Edit product
+    function editProduct(product) {
+        // Hide detail modal
+        hideDetailModal();
+        
+        // Fill form with product data
+        document.getElementById('product-id').value = product.id;
+        document.getElementById('product-name').value = product.name;
+        document.getElementById('product-url').value = product.website_url || '';
+        document.getElementById('extract-content').checked = false;
+        document.getElementById('product-category').value = product.category || '';
+        document.getElementById('product-vendor').value = product.vendor || '';
+        document.getElementById('product-version').value = product.version || '';
+        document.getElementById('product-price').value = product.price || '';
+        document.getElementById('product-pricing-model').value = product.pricing_model || '';
+        document.getElementById('product-description').value = product.description || '';
+        
+        // Update modal title
+        document.getElementById('modal-title').textContent = 'Edit Product';
+        document.getElementById('modal-error').classList.add('hidden');
+        
+        // Show product modal
+        document.getElementById('product-modal').classList.remove('hidden');
+    }
+    
+    // Show delete confirmation modal
+    function showDeleteModal() {
+        document.getElementById('delete-modal').classList.remove('hidden');
+    }
+    
+    // Hide delete confirmation modal
+    function hideDeleteModal() {
+        document.getElementById('delete-modal').classList.add('hidden');
+    }
+    
+    // Delete product
+    async function deleteProduct() {
+        // Show loading state
+        const deleteButton = document.getElementById('confirm-delete-button');
+        const deleteText = document.getElementById('delete-text');
+        const deleteSpinner = document.getElementById('delete-spinner');
+        
+        deleteButton.disabled = true;
+        deleteText.classList.add('hidden');
+        deleteSpinner.classList.remove('hidden');
+        
+        try {
+            // Delete product
+            await API.delete(`/products/${currentProductId}`);
+            
+            // Hide modals
+            hideDeleteModal();
+            hideDetailModal();
+            
+            // Reload products
+            await loadProducts();
+            
+            // Show success message
+            showToast('Product deleted successfully', 'success');
+        } catch (error) {
+            console.error('Error deleting product:', error);
+            showToast('Failed to delete product', 'error');
+            
+            // Hide delete modal
+            hideDeleteModal();
+        } finally {
+            // Reset button
+            deleteButton.disabled = false;
+            deleteText.classList.remove('hidden');
+            deleteSpinner.classList.add('hidden');
+        }
+    }
+    
+    // Navigate to evaluate product page
+    function evaluateProduct(productId) {
+        window.location.href = `/evaluations/new?product_id=${productId}`;
+    }
+    
+    // Helper function to format pricing model
+    function formatPricingModel(model) {
+        const formats = {
+            'free': 'Free',
+            'freemium': 'Freemium',
+            'subscription': 'Subscription',
+            'one-time': 'One-time Purchase',
+            'usage-based': 'Usage-based',
+            'other': 'Other'
+        };
+        
+        return formats[model] || model;
+    }
+    
+    // Helper function to generate star rating HTML
+    function getStarRating(rating) {
+        const fullStars = Math.floor(rating);
+        const halfStar = rating % 1 >= 0.5;
+        const emptyStars = 5 - fullStars - (halfStar ? 1 : 0);
+        
+        let stars = '';
+        
+        // Full stars
+        for (let i = 0; i < fullStars; i++) {
+            stars += '<i class="fas fa-star"></i>';
+        }
+        
+        // Half star
+        if (halfStar) {
+            stars += '<i class="fas fa-star-half-alt"></i>';
+        }
+        
+        // Empty stars
+        for (let i = 0; i < emptyStars; i++) {
+            stars += '<i class="far fa-star"></i>';
+        }
+        
+        return stars;
+    }
+    
+    // Helper function to format extracted content
+    function formatExtractedContent(content) {
+        if (!content) return '';
+        
+        // Split into paragraphs
+        const paragraphs = content.split(/\n\s*\n/);
+        
+        // Take first few paragraphs (max 1000 chars)
+        let result = '';
+        let totalLength = 0;
+        
+        for (const paragraph of paragraphs) {
+            if (paragraph.trim().length === 0) continue;
+            
+            const trimmedParagraph = paragraph.trim();
+            totalLength += trimmedParagraph.length;
+            
+            result += `<p class="mb-2">${escapeHtml(trimmedParagraph)}</p>`;
+            
+            if (totalLength >= 1000) {
+                result += '<p class="text-gray-500 italic">Content truncated...</p>';
+                break;
+            }
+        }
+        
+        return result;
+    }
+    
+    // Helper function to escape HTML
+    function escapeHtml(text) {
+        if (!text) return '';
+        
+        const div = document.createElement('div');
+        div.textContent = text;
+        return div.innerHTML;
+    }
+</script>
+{% endblock %}

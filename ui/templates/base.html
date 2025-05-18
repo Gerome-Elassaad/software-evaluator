@@ -1,0 +1,271 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}{{ app_name }}{% endblock %}</title>
+    
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Font Awesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="/static/css/custom.css">
+    
+    <!-- Custom styles -->
+    <style>
+        .loading {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid rgba(255,255,255,.3);
+            border-radius: 50%;
+            border-top-color: #fff;
+            animation: spin 1s ease-in-out infinite;
+        }
+        
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+        
+        .tooltip {
+            position: relative;
+            display: inline-block;
+        }
+        
+        .tooltip .tooltip-text {
+            visibility: hidden;
+            width: 200px;
+            background-color: #333;
+            color: #fff;
+            text-align: center;
+            border-radius: 6px;
+            padding: 5px;
+            position: absolute;
+            z-index: 1;
+            bottom: 125%;
+            left: 50%;
+            margin-left: -100px;
+            opacity: 0;
+            transition: opacity 0.3s;
+        }
+        
+        .tooltip:hover .tooltip-text {
+            visibility: visible;
+            opacity: 1;
+        }
+    </style>
+    
+    {% block head %}{% endblock %}
+</head>
+<body class="min-h-screen bg-gray-100">
+    <!-- Navigation -->
+    <nav class="bg-indigo-600 text-white p-4">
+        <div class="container mx-auto flex justify-between items-center">
+            <a href="/" class="text-xl font-bold">{{ app_name }}</a>
+            
+            <div class="hidden md:flex space-x-4">
+                <a href="/" class="hover:text-indigo-200">Home</a>
+                <a href="/products" class="hover:text-indigo-200">Products</a>
+                <a href="/evaluations" class="hover:text-indigo-200">Evaluations</a>
+                
+                <div id="auth-links">
+                    <!-- Links will be populated by JavaScript based on auth status -->
+                </div>
+            </div>
+            
+            <!-- Mobile menu button -->
+            <div class="md:hidden">
+                <button id="mobile-menu-button" class="text-white focus:outline-none">
+                    <i class="fas fa-bars"></i>
+                </button>
+            </div>
+        </div>
+        
+        <!-- Mobile menu -->
+        <div id="mobile-menu" class="hidden md:hidden mt-2">
+            <div class="flex flex-col space-y-2">
+                <a href="/" class="block px-4 py-2 hover:bg-indigo-700">Home</a>
+                <a href="/products" class="block px-4 py-2 hover:bg-indigo-700">Products</a>
+                <a href="/evaluations" class="block px-4 py-2 hover:bg-indigo-700">Evaluations</a>
+                
+                <div id="mobile-auth-links">
+                    <!-- Links will be populated by JavaScript based on auth status -->
+                </div>
+            </div>
+        </div>
+    </nav>
+    
+    <!-- Flash messages -->
+    <div id="flash-messages" class="container mx-auto mt-4">
+        {% if messages %}
+            {% for message in messages %}
+                <div class="bg-{{ message.type }}-100 border border-{{ message.type }}-400 text-{{ message.type }}-700 px-4 py-3 rounded mb-4 relative">
+                    <span class="block sm:inline">{{ message.text }}</span>
+                    <button class="absolute top-0 right-0 mt-3 mr-4 text-{{ message.type }}-700" onclick="this.parentElement.style.display='none'">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+            {% endfor %}
+        {% endif %}
+    </div>
+    
+    <!-- Main content -->
+    <main class="container mx-auto py-6 px-4">
+        {% block content %}{% endblock %}
+    </main>
+    
+    <!-- Footer -->
+    <footer class="bg-indigo-800 text-white py-8 mt-auto">
+        <div class="container mx-auto px-4">
+            <div class="flex flex-col md:flex-row justify-between">
+                <div class="mb-4 md:mb-0">
+                    <h3 class="text-xl font-bold mb-2">{{ app_name }}</h3>
+                    <p class="text-indigo-200">AI-powered product evaluation tool for software developers and founders</p>
+                </div>
+                <div>
+                    <h4 class="text-lg font-semibold mb-2">Quick Links</h4>
+                    <ul class="space-y-1">
+                        <li><a href="/" class="text-indigo-200 hover:text-white">Home</a></li>
+                        <li><a href="/products" class="text-indigo-200 hover:text-white">Products</a></li>
+                        <li><a href="/evaluations" class="text-indigo-200 hover:text-white">Evaluations</a></li>
+                    </ul>
+                </div>
+            </div>
+            <div class="mt-8 border-t border-indigo-700 pt-4 text-sm text-indigo-300">
+                <p>&copy; 2024 {{ app_name }}. All rights reserved.</p>
+            </div>
+        </div>
+    </footer>
+    
+    <!-- Toast notification container -->
+    <div id="toast-container" class="fixed bottom-4 right-4 z-50"></div>
+    
+    <!-- Common scripts -->
+    <script src="/static/js/common.js"></script>
+    
+    <!-- Authentication script -->
+    <script>
+        // Mobile menu toggle
+        document.getElementById('mobile-menu-button').addEventListener('click', function() {
+            const mobileMenu = document.getElementById('mobile-menu');
+            mobileMenu.classList.toggle('hidden');
+        });
+        
+        // Check authentication status and update menu links
+        function updateAuthLinks() {
+            const token = localStorage.getItem('auth_token');
+            const authLinks = document.getElementById('auth-links');
+            const mobileAuthLinks = document.getElementById('mobile-auth-links');
+            
+            if (token) {
+                // User is logged in
+                const userInfo = JSON.parse(localStorage.getItem('user_info') || '{}');
+                const username = userInfo.username || 'User';
+                
+                authLinks.innerHTML = `
+                    <span class="text-indigo-200 mr-2">Hello, ${username}</span>
+                    <a href="/profile" class="hover:text-indigo-200">Profile</a>
+                    <a href="#" id="logout-link" class="hover:text-indigo-200">Logout</a>
+                `;
+                
+                mobileAuthLinks.innerHTML = `
+                    <span class="block px-4 py-2 text-indigo-200">Hello, ${username}</span>
+                    <a href="/profile" class="block px-4 py-2 hover:bg-indigo-700">Profile</a>
+                    <a href="#" id="mobile-logout-link" class="block px-4 py-2 hover:bg-indigo-700">Logout</a>
+                `;
+                
+                // Add logout event listeners
+                document.getElementById('logout-link').addEventListener('click', logout);
+                document.getElementById('mobile-logout-link').addEventListener('click', logout);
+            } else {
+                // User is not logged in
+                authLinks.innerHTML = `
+                    <a href="/login" class="hover:text-indigo-200">Login</a>
+                    <a href="/register" class="hover:text-indigo-200">Register</a>
+                `;
+                
+                mobileAuthLinks.innerHTML = `
+                    <a href="/login" class="block px-4 py-2 hover:bg-indigo-700">Login</a>
+                    <a href="/register" class="block px-4 py-2 hover:bg-indigo-700">Register</a>
+                `;
+            }
+        }
+        
+        // Logout function
+        function logout(e) {
+            e.preventDefault();
+            localStorage.removeItem('auth_token');
+            localStorage.removeItem('user_info');
+            window.location.href = '/login';
+        }
+        
+        // Show toast notification
+        function showToast(message, type = 'success', duration = 3000) {
+            const toast = document.createElement('div');
+            toast.className = `mb-3 p-3 rounded-lg shadow-lg ${
+                type === 'success' ? 'bg-green-500' : 
+                type === 'error' ? 'bg-red-500' : 
+                type === 'warning' ? 'bg-yellow-500' : 'bg-blue-500'
+            } text-white`;
+            
+            toast.innerHTML = `
+                <div class="flex items-center">
+                    <i class="mr-2 fas ${
+                        type === 'success' ? 'fa-check-circle' : 
+                        type === 'error' ? 'fa-exclamation-circle' : 
+                        type === 'warning' ? 'fa-exclamation-triangle' : 'fa-info-circle'
+                    }"></i>
+                    <span>${message}</span>
+                    <button onclick="this.parentElement.parentElement.remove()" class="ml-auto">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+            `;
+            
+            document.getElementById('toast-container').appendChild(toast);
+            
+            setTimeout(() => {
+                toast.classList.add('opacity-0', 'transition-opacity', 'duration-300');
+                setTimeout(() => toast.remove(), 300);
+            }, duration);
+        }
+        
+        // Run auth check when the page loads
+        document.addEventListener('DOMContentLoaded', updateAuthLinks);
+        
+        // Check if user is authenticated and redirect if needed
+        function requireAuth() {
+            const token = localStorage.getItem('auth_token');
+            if (!token) {
+                window.location.href = '/login';
+                return false;
+            }
+            return true;
+        }
+        
+        // Check if user is authenticated and redirect if already logged in
+        function redirectIfAuthenticated() {
+            const token = localStorage.getItem('auth_token');
+            if (token) {
+                window.location.href = '/';
+                return true;
+            }
+            return false;
+        }
+        
+        // Helper function to escape HTML
+        function escapeHtml(text) {
+            if (!text) return '';
+            
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+    </script>
+    
+    {% block scripts %}{% endblock %}
+</body>
+</html>

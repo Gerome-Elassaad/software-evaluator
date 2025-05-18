@@ -1,0 +1,708 @@
+{% extends "base.html" %}
+
+{% block title %}{{ app_name }} - Evaluation Details{% endblock %}
+
+{% block head %}
+<style>
+    .score-pill {
+        position: relative;
+    }
+    
+    .score-bar {
+        position: absolute;
+        bottom: 0;
+        left: 0;
+        height: 4px;
+        border-radius: 0 0 4px 4px;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div id="evaluation-container" class="mb-8">
+    <div id="loading-evaluation" class="text-center py-12">
+        <div class="inline-block w-12 h-12 border-4 border-indigo-600 border-t-transparent rounded-full animate-spin"></div>
+        <p class="mt-4 text-gray-600 text-lg">Loading evaluation...</p>
+    </div>
+</div>
+
+<!-- Delete Confirmation Modal -->
+<div id="delete-modal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+    <div class="bg-white rounded-lg shadow-xl max-w-md w-full">
+        <div class="p-6">
+            <h2 class="text-xl font-bold text-gray-800 mb-4">Confirm Deletion</h2>
+            <p class="text-gray-600 mb-6">Are you sure you want to delete this evaluation? This action cannot be undone.</p>
+            
+            <div class="flex justify-end gap-3">
+                <button id="cancel-delete-button" 
+                        class="border border-gray-300 text-gray-700 py-2 px-4 rounded-lg hover:bg-gray-100 transition">
+                    Cancel
+                </button>
+                <button id="confirm-delete-button" 
+                        class="bg-red-600 text-white py-2 px-4 rounded-lg hover:bg-red-700 transition">
+                    <span id="delete-text">Delete</span>
+                    <span id="delete-spinner" class="loading hidden"></span>
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Share Modal -->
+<div id="share-modal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+    <div class="bg-white rounded-lg shadow-xl max-w-md w-full">
+        <div class="p-6 border-b">
+            <div class="flex justify-between items-center">
+                <h2 class="text-xl font-bold text-gray-800">Share Evaluation</h2>
+                <button id="close-share-modal-button" class="text-gray-500 hover:text-gray-700">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+        </div>
+        
+        <div class="p-6">
+            <p class="text-gray-600 mb-4">Share this evaluation with others:</p>
+            
+            <div id="share-options" class="space-y-4">
+                <div>
+                    <label class="flex items-center">
+                        <input type="radio" name="share-type" value="link" checked class="mr-2">
+                        <span>Share link</span>
+                    </label>
+                    
+                    <div id="link-section" class="mt-2">
+                        <div class="flex items-center">
+                            <input type="text" id="share-link" readonly class="flex-1 border rounded-l-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-gray-50">
+                            <button id="copy-link-button" class="bg-indigo-600 text-white px-3 py-2 rounded-r-lg hover:bg-indigo-700 transition">
+                                <i class="fas fa-copy"></i>
+                            </button>
+                        </div>
+                        <p class="text-sm text-gray-500 mt-1">Note: Only published evaluations can be viewed by others.</p>
+                    </div>
+                </div>
+                
+                <div>
+                    <label class="flex items-center">
+                        <input type="radio" name="share-type" value="pdf" class="mr-2">
+                        <span>Export as PDF</span>
+                    </label>
+                    
+                    <div id="pdf-section" class="mt-2 hidden">
+                        <button id="export-pdf-button" class="bg-indigo-600 text-white px-4 py-2 rounded-lg hover:bg-indigo-700 transition w-full">
+                            <i class="fas fa-file-pdf mr-2"></i> Export to PDF
+                        </button>
+                        <p class="text-sm text-gray-500 mt-1">Generate a PDF report of this evaluation.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    // Check if user is authenticated
+    document.addEventListener('DOMContentLoaded', () => {
+        if (!requireAuth()) return;
+        
+        // Get evaluation ID from URL
+        const evaluationId = getEvaluationIdFromUrl();
+        
+        if (evaluationId) {
+            // Load evaluation details
+            loadEvaluation(evaluationId);
+        } else {
+            // Show error
+            showError('No evaluation ID provided');
+        }
+        
+        // Set up modal event listeners
+        document.getElementById('cancel-delete-button').addEventListener('click', hideDeleteModal);
+        document.getElementById('confirm-delete-button').addEventListener('click', deleteEvaluation);
+        document.getElementById('close-share-modal-button').addEventListener('click', hideShareModal);
+        
+        // Set up share type radio buttons
+        const shareRadios = document.querySelectorAll('input[name="share-type"]');
+        shareRadios.forEach(radio => {
+            radio.addEventListener('change', toggleShareSection);
+        });
+    });
+    
+    // Global variables
+    let currentEvaluation = null;
+    
+    // Get evaluation ID from URL
+    function getEvaluationIdFromUrl() {
+        const path = window.location.pathname;
+        const pathParts = path.split('/');
+        
+        // The URL format should be /evaluations/{id}
+        if (pathParts.length >= 3 && pathParts[1] === 'evaluations') {
+            return pathParts[2];
+        }
+        
+        return null;
+    }
+    
+    // Load evaluation details
+    async function loadEvaluation(evaluationId) {
+        try {
+            // Get evaluation details
+            const evaluation = await API.get(`/evaluations/${evaluationId}`);
+            currentEvaluation = evaluation;
+            
+            // Display evaluation
+            displayEvaluation(evaluation);
+        } catch (error) {
+            console.error('Error loading evaluation:', error);
+            showError('Failed to load evaluation. It may have been deleted or you do not have permission to view it.');
+        }
+    }
+    
+    // Display evaluation details
+    function displayEvaluation(evaluation) {
+        const container = document.getElementById('evaluation-container');
+        
+        // Hide loading indicator
+        document.getElementById('loading-evaluation').classList.add('hidden');
+        
+        // Create evaluation content
+        container.innerHTML = `
+            <!-- Back button and actions -->
+            <div class="flex justify-between items-start mb-6">
+                <a href="/evaluations" class="text-indigo-600 hover:text-indigo-800">
+                    <i class="fas fa-arrow-left mr-1"></i> Back to Evaluations
+                </a>
+                
+                <div class="flex space-x-2">
+                    ${!evaluation.is_published ? `
+                        <button id="publish-button" class="bg-green-600 text-white py-2 px-4 rounded-lg hover:bg-green-700 transition">
+                            <i class="fas fa-check mr-1"></i> Publish
+                        </button>
+                    ` : `
+                        <button id="unpublish-button" class="bg-yellow-600 text-white py-2 px-4 rounded-lg hover:bg-yellow-700 transition">
+                            <i class="fas fa-eye-slash mr-1"></i> Unpublish
+                        </button>
+                    `}
+                    
+                    <button id="share-button" class="bg-indigo-600 text-white py-2 px-4 rounded-lg hover:bg-indigo-700 transition">
+                        <i class="fas fa-share-alt mr-1"></i> Share
+                    </button>
+                    
+                    <button id="edit-button" class="border border-gray-300 text-gray-700 py-2 px-4 rounded-lg hover:bg-gray-100 transition">
+                        <i class="fas fa-edit mr-1"></i> Edit
+                    </button>
+                    
+                    <button id="delete-button" class="border border-red-300 text-red-700 py-2 px-4 rounded-lg hover:bg-red-50 transition">
+                        <i class="fas fa-trash-alt mr-1"></i> Delete
+                    </button>
+                </div>
+            </div>
+            
+            <!-- Header section -->
+            <div class="mb-6">
+                <div class="flex justify-between items-start">
+                    <div>
+                        <h1 class="text-3xl font-bold text-indigo-800 mb-2">${escapeHtml(evaluation.title)}</h1>
+                        <p class="text-gray-600 mb-2">
+                            <span class="font-semibold">Product:</span> ${escapeHtml(evaluation.product_name)}
+                        </p>
+                        <div class="flex items-center text-sm text-gray-500">
+                            <span class="mr-4">
+                                <i class="far fa-calendar mr-1"></i> ${formatDate(evaluation.created_at)}
+                            </span>
+                            <span class="mr-4">
+                                <i class="far fa-user mr-1"></i> You
+                            </span>
+                            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${evaluation.is_published ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'}">
+                                ${evaluation.is_published ? 'Published' : 'Draft'}
+                            </span>
+                        </div>
+                    </div>
+                    
+                    <div class="text-center">
+                        <div class="inline-block w-24 h-24 rounded-full border-8 ${getScoreBorderClass(evaluation.overall_score)} flex items-center justify-center">
+                            <span class="text-3xl font-bold ${getScoreTextClass(evaluation.overall_score)}">
+                                ${evaluation.overall_score ? evaluation.overall_score.toFixed(1) : '-'}
+                            </span>
+                        </div>
+                        <div class="mt-1 text-sm text-gray-600">Overall Score</div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Two-column layout for desktop -->
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                <!-- Main column -->
+                <div class="lg:col-span-2">
+                    <!-- Summary section -->
+                    ${evaluation.summary ? `
+                        <div class="bg-white p-6 rounded-lg shadow-md mb-6">
+                            <h2 class="text-xl font-bold text-indigo-800 mb-4">Summary</h2>
+                            <div class="prose max-w-none">
+                                ${formatMarkdown(evaluation.summary)}
+                            </div>
+                        </div>
+                    ` : ''}
+                    
+                    <!-- Criteria evaluations -->
+                    <div class="bg-white p-6 rounded-lg shadow-md mb-6">
+                        <h2 class="text-xl font-bold text-indigo-800 mb-4">Criteria Evaluations</h2>
+                        <div class="space-y-6">
+                            ${evaluation.criteria_evaluations.map(criterion => `
+                                <div class="p-4 border rounded-lg">
+                                    <div class="flex justify-between items-start mb-3">
+                                        <div>
+                                            <h3 class="font-semibold text-gray-800">${escapeHtml(criterion.criterion_name)}</h3>
+                                            <p class="text-sm text-gray-600">${escapeHtml(criterion.criterion_description || '')}</p>
+                                        </div>
+                                        <div class="score-pill px-3 py-1 rounded-lg text-center min-w-[50px] ${getScoreBgClass(criterion.score)}">
+                                            <span class="font-bold">${criterion.score || '-'}</span>
+                                            <div class="score-bar ${getScoreBarClass(criterion.score)}" style="width: ${criterion.score ? (criterion.score * 10) + '%' : '0%'}"></div>
+                                        </div>
+                                    </div>
+                                    
+                                    ${criterion.notes ? `
+                                        <div class="mb-3">
+                                            <h4 class="text-sm font-medium text-gray-700 mb-1">Notes</h4>
+                                            <p class="text-gray-600">${escapeHtml(criterion.notes)}</p>
+                                        </div>
+                                    ` : ''}
+                                    
+                                    ${criterion.ai_generated_assessment ? `
+                                        <div class="bg-indigo-50 p-3 rounded-lg border border-indigo-100">
+                                            <div class="flex items-start">
+                                                <div class="text-indigo-600 mr-2 mt-1">
+                                                    <i class="fas fa-robot"></i>
+                                                </div>
+                                                <div>
+                                                    <h4 class="text-sm font-medium text-indigo-800 mb-1">AI Assessment</h4>
+                                                    <p class="text-sm text-gray-700">${escapeHtml(criterion.ai_generated_assessment)}</p>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    ` : ''}
+                                </div>
+                            `).join('')}
+                        </div>
+                    </div>
+                    
+                    <!-- Notes section -->
+                    ${evaluation.notes ? `
+                        <div class="bg-white p-6 rounded-lg shadow-md mb-6">
+                            <h2 class="text-xl font-bold text-indigo-800 mb-4">Additional Notes</h2>
+                            <div class="prose max-w-none">
+                                ${formatMarkdown(evaluation.notes)}
+                            </div>
+                        </div>
+                    ` : ''}
+                </div>
+                
+                <!-- Sidebar column -->
+                <div class="lg:col-span-1">
+                    <!-- Score breakdown section -->
+                    <div class="bg-white p-6 rounded-lg shadow-md mb-6">
+                        <h2 class="text-xl font-bold text-indigo-800 mb-4">Score Breakdown</h2>
+                        <div class="space-y-3">
+                            ${evaluation.criteria_evaluations
+                                .filter(criterion => criterion.score)
+                                .sort((a, b) => (b.score || 0) - (a.score || 0))
+                                .map(criterion => `
+                                    <div class="flex justify-between items-center">
+                                        <span class="text-gray-700">${escapeHtml(criterion.criterion_name)}</span>
+                                        <div class="flex items-center">
+                                            <span class="font-semibold ${getScoreTextClass(criterion.score)}">${criterion.score}</span>
+                                            <span class="text-gray-400 ml-1 text-xs">${criterion.criterion_weight > 1 ? `(${criterion.criterion_weight}x)` : ''}</span>
+                                        </div>
+                                    </div>
+                                `).join('')}
+                        </div>
+                    </div>
+                    
+                    <!-- Product information -->
+                    <div class="bg-white p-6 rounded-lg shadow-md mb-6">
+                        <h2 class="text-xl font-bold text-indigo-800 mb-4">Product Information</h2>
+                        <div class="space-y-3">
+                            <div>
+                                <h3 class="text-sm font-semibold text-gray-500 uppercase">Name</h3>
+                                <p class="mt-1">${escapeHtml(evaluation.product_name)}</p>
+                            </div>
+                            
+                            ${evaluation.product_description ? `
+                                <div>
+                                    <h3 class="text-sm font-semibold text-gray-500 uppercase">Description</h3>
+                                    <p class="mt-1">${escapeHtml(evaluation.product_description)}</p>
+                                </div>
+                            ` : ''}
+                            
+                            <div class="mt-3">
+                                <a href="/products?id=${evaluation.product_id}" class="text-indigo-600 hover:text-indigo-800">
+                                    <i class="fas fa-external-link-alt mr-1"></i> View Product
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- AI generated content banner (if any) -->
+                    ${evaluation.ai_generated_summary ? `
+                        <div class="bg-indigo-50 p-6 rounded-lg border border-indigo-200 mb-6">
+                            <div class="flex items-start">
+                                <div class="text-indigo-600 mr-3 mt-1 text-xl">
+                                    <i class="fas fa-robot"></i>
+                                </div>
+                                <div>
+                                    <h3 class="text-lg font-semibold text-indigo-800 mb-2">AI-Generated Content</h3>
+                                    <p class="text-gray-700 text-sm mb-3">This evaluation was analyzed with AI assistance.</p>
+                                    <button id="view-ai-summary-button" class="text-indigo-600 hover:text-indigo-800 text-sm">
+                                        <i class="fas fa-eye mr-1"></i> View AI Summary
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    ` : ''}
+                </div>
+            </div>
+        `;
+        
+        // Set up event listeners
+        setupEventListeners(evaluation);
+    }
+    
+    // Set up event listeners for buttons
+    function setupEventListeners(evaluation) {
+        // Action buttons
+        const publishButton = document.getElementById('publish-button');
+        if (publishButton) {
+            publishButton.addEventListener('click', publishEvaluation);
+        }
+        
+        const unpublishButton = document.getElementById('unpublish-button');
+        if (unpublishButton) {
+            unpublishButton.addEventListener('click', unpublishEvaluation);
+        }
+        
+        document.getElementById('share-button').addEventListener('click', showShareModal);
+        document.getElementById('edit-button').addEventListener('click', editEvaluation);
+        document.getElementById('delete-button').addEventListener('click', confirmDelete);
+        
+        // AI summary button
+        const aiSummaryButton = document.getElementById('view-ai-summary-button');
+        if (aiSummaryButton) {
+            aiSummaryButton.addEventListener('click', viewAISummary);
+        }
+        
+        // Copy link button (in share modal)
+        const copyLinkButton = document.getElementById('copy-link-button');
+        if (copyLinkButton) {
+            copyLinkButton.addEventListener('click', copyShareLink);
+        }
+        
+        // Export PDF button (in share modal)
+        const exportPdfButton = document.getElementById('export-pdf-button');
+        if (exportPdfButton) {
+            exportPdfButton.addEventListener('click', exportPdf);
+        }
+    }
+    
+    // Show error message
+    function showError(message) {
+        const container = document.getElementById('evaluation-container');
+        
+        // Hide loading indicator
+        document.getElementById('loading-evaluation').classList.add('hidden');
+        
+        // Show error message
+        container.innerHTML = `
+            <div class="text-center py-12">
+                <div class="text-red-500 text-5xl mb-4">
+                    <i class="fas fa-exclamation-circle"></i>
+                </div>
+                <h2 class="text-xl font-bold text-gray-800 mb-2">Error</h2>
+                <p class="text-gray-600">${escapeHtml(message)}</p>
+                <a href="/evaluations" class="inline-block mt-4 text-indigo-600 hover:text-indigo-800">
+                    <i class="fas fa-arrow-left mr-1"></i> Back to Evaluations
+                </a>
+            </div>
+        `;
+    }
+    
+    // Publish evaluation
+    async function publishEvaluation() {
+        if (!currentEvaluation) return;
+        
+        try {
+            // Call API to publish evaluation
+            await API.post(`/evaluations/${currentEvaluation.id}/publish`);
+            
+            // Reload evaluation
+            await loadEvaluation(currentEvaluation.id);
+            
+            // Show success message
+            showToast('Evaluation published successfully', 'success');
+        } catch (error) {
+            console.error('Error publishing evaluation:', error);
+            showToast('Failed to publish evaluation', 'error');
+        }
+    }
+    
+    // Unpublish evaluation
+    async function unpublishEvaluation() {
+        if (!currentEvaluation) return;
+        
+        try {
+            // Call API to unpublish evaluation
+            await API.post(`/evaluations/${currentEvaluation.id}/unpublish`);
+            
+            // Reload evaluation
+            await loadEvaluation(currentEvaluation.id);
+            
+            // Show success message
+            showToast('Evaluation unpublished successfully', 'success');
+        } catch (error) {
+            console.error('Error unpublishing evaluation:', error);
+            showToast('Failed to unpublish evaluation', 'error');
+        }
+    }
+    
+    // Show share modal
+    function showShareModal() {
+        if (!currentEvaluation) return;
+        
+        // Set share link
+        const shareLink = `${window.location.origin}/evaluations/${currentEvaluation.id}`;
+        document.getElementById('share-link').value = shareLink;
+        
+        // Show modal
+        document.getElementById('share-modal').classList.remove('hidden');
+        
+        // Select first radio button and show link section
+        const linkRadio = document.querySelector('input[name="share-type"][value="link"]');
+        linkRadio.checked = true;
+        toggleShareSection();
+    }
+    
+    // Hide share modal
+    function hideShareModal() {
+        document.getElementById('share-modal').classList.add('hidden');
+    }
+    
+    // Toggle share section based on radio selection
+    function toggleShareSection() {
+        const shareType = document.querySelector('input[name="share-type"]:checked').value;
+        
+        // Show/hide sections
+        document.getElementById('link-section').classList.toggle('hidden', shareType !== 'link');
+        document.getElementById('pdf-section').classList.toggle('hidden', shareType !== 'pdf');
+    }
+    
+    // Copy share link to clipboard
+    function copyShareLink() {
+        const linkInput = document.getElementById('share-link');
+        
+        // Select the text
+        linkInput.select();
+        linkInput.setSelectionRange(0, 99999); // For mobile devices
+        
+        // Copy to clipboard
+        document.execCommand('copy');
+        
+        // Show success message
+        showToast('Link copied to clipboard', 'success');
+    }
+    
+    // Export evaluation to PDF
+    function exportPdf() {
+        // For MVP, just show a toast message
+        showToast('PDF export functionality will be available in the next version', 'info');
+    }
+    
+    // Edit evaluation
+    function editEvaluation() {
+        if (!currentEvaluation) return;
+        
+        // Redirect to edit page
+        window.location.href = `/evaluations/${currentEvaluation.id}/edit`;
+    }
+    
+    // Confirm delete
+    function confirmDelete() {
+        // Show delete modal
+        document.getElementById('delete-modal').classList.remove('hidden');
+    }
+    
+    // Hide delete modal
+    function hideDeleteModal() {
+        document.getElementById('delete-modal').classList.add('hidden');
+    }
+    
+    // Delete evaluation
+    async function deleteEvaluation() {
+        if (!currentEvaluation) {
+            hideDeleteModal();
+            return;
+        }
+        
+        // Show loading state
+        const deleteButton = document.getElementById('confirm-delete-button');
+        const deleteText = document.getElementById('delete-text');
+        const deleteSpinner = document.getElementById('delete-spinner');
+        
+        deleteButton.disabled = true;
+        deleteText.classList.add('hidden');
+        deleteSpinner.classList.remove('hidden');
+        
+        try {
+            // Call API to delete evaluation
+            await API.delete(`/evaluations/${currentEvaluation.id}`);
+            
+            // Hide delete modal
+            hideDeleteModal();
+            
+            // Show success message
+            showToast('Evaluation deleted successfully', 'success');
+            
+            // Redirect to evaluations list
+            setTimeout(() => {
+                window.location.href = '/evaluations';
+            }, 1000);
+        } catch (error) {
+            console.error('Error deleting evaluation:', error);
+            
+            // Show error message
+            showToast('Failed to delete evaluation', 'error');
+            
+            // Hide delete modal
+            hideDeleteModal();
+            
+            // Reset button
+            deleteButton.disabled = false;
+            deleteText.classList.remove('hidden');
+            deleteSpinner.classList.add('hidden');
+        }
+    }
+    
+    // View AI summary
+    function viewAISummary() {
+        if (!currentEvaluation || !currentEvaluation.ai_generated_summary) return;
+        
+        // Create modal element
+        const modal = document.createElement('div');
+        modal.className = 'fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50';
+        modal.innerHTML = `
+            <div class="bg-white rounded-lg shadow-xl max-w-4xl w-full max-h-[90vh] overflow-y-auto">
+                <div class="p-6 border-b">
+                    <div class="flex justify-between items-center">
+                        <h2 class="text-2xl font-bold text-indigo-800">AI-Generated Summary</h2>
+                        <button class="close-ai-modal-button text-gray-500 hover:text-gray-700">
+                            <i class="fas fa-times"></i>
+                        </button>
+                    </div>
+                </div>
+                
+                <div class="p-6">
+                    <div class="prose max-w-none">
+                        ${formatMarkdown(currentEvaluation.ai_generated_summary)}
+                    </div>
+                </div>
+                
+                <div class="p-6 border-t bg-gray-50">
+                    <div class="flex justify-end">
+                        <button class="close-ai-modal-button bg-indigo-600 text-white py-2 px-4 rounded-lg hover:bg-indigo-700 transition">
+                            Close
+                        </button>
+                    </div>
+                </div>
+            </div>
+        `;
+        
+        // Add to document
+        document.body.appendChild(modal);
+        
+        // Add event listeners
+        const closeButtons = modal.querySelectorAll('.close-ai-modal-button');
+        closeButtons.forEach(button => {
+            button.addEventListener('click', () => {
+                modal.remove();
+            });
+        });
+    }
+    
+    // Helper function to get score color classes
+    function getScoreBorderClass(score) {
+        if (!score) return 'border-gray-200';
+        if (score >= 8) return 'border-green-400';
+        if (score >= 6) return 'border-amber-400';
+        if (score >= 4) return 'border-orange-400';
+        return 'border-red-400';
+    }
+    
+    function getScoreTextClass(score) {
+        if (!score) return 'text-gray-500';
+        if (score >= 8) return 'text-green-600';
+        if (score >= 6) return 'text-amber-600';
+        if (score >= 4) return 'text-orange-600';
+        return 'text-red-600';
+    }
+    
+    function getScoreBgClass(score) {
+        if (!score) return 'bg-gray-100 text-gray-600';
+        if (score >= 8) return 'bg-green-100 text-green-800';
+        if (score >= 6) return 'bg-amber-100 text-amber-800';
+        if (score >= 4) return 'bg-orange-100 text-orange-800';
+        return 'bg-red-100 text-red-800';
+    }
+    
+    function getScoreBarClass(score) {
+        if (!score) return 'bg-gray-300';
+        if (score >= 8) return 'bg-green-500';
+        if (score >= 6) return 'bg-amber-500';
+        if (score >= 4) return 'bg-orange-500';
+        return 'bg-red-500';
+    }
+    
+    // Helper function to format date
+    function formatDate(dateString) {
+        if (!dateString) return '';
+        
+        const date = new Date(dateString);
+        
+        // Format as "June 15, 2023"
+        return date.toLocaleDateString('en-US', {
+            month: 'long',
+            day: 'numeric',
+            year: 'numeric'
+        });
+    }
+    
+    // Helper function to format markdown text
+    function formatMarkdown(text) {
+        if (!text) return '';
+        
+        // Replace headers (# Header) with styled headers
+        text = text.replace(/^#\s+(.+)$/gm, '<h3 class="font-semibold text-indigo-800 text-lg mt-4 mb-2">$1</h3>');
+        text = text.replace(/^##\s+(.+)$/gm, '<h4 class="font-semibold text-indigo-700 mt-3 mb-1">$1</h4>');
+        
+        // Split into paragraphs
+        const paragraphs = text.split(/\n\s*\n/);
+        
+        // Format paragraphs (skip those that were converted to headers)
+        return paragraphs
+            .map(p => {
+                if (p.startsWith('<h')) return p;
+                if (p.trim().length === 0) return '';
+                return `<p class="mb-2">${escapeHtml(p.trim())}</p>`;
+            })
+            .join('');
+    }
+    
+    // Helper function to escape HTML
+    function escapeHtml(text) {
+        if (!text) return '';
+        
+        const div = document.createElement('div');
+        div.textContent = text;
+        return div.innerHTML;
+    }
+</script>
+{% endblock %}

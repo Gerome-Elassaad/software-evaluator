@@ -41,37 +41,29 @@ This guide will help you set up and run the Product Evaluator tool for local dev
      ```
      cp .env.local .env
      ```
-   - Edit `.env` to configure your settings. At minimum, update:
+   - Edit `.env` to configure your settings. You'll need to update:
      - `JWT_SECRET_KEY` with a secure random string
-     - `GOOGLE_API_KEY` with your Google API key
-     - Or `OPENAI_API_KEY` with your OpenAI API key
-
-## Database Setup
-
-By default, the application uses SQLite for local development, which requires no additional setup.
-
-To create the initial database and seed it with an admin user:
-
-1. **Run the application once to create the database**:
-   ```
-   python -m product_evaluator.main
-   ```
-
-2. **Create an admin user**:
-   ```
-   python scripts/create_admin.py --username admin --email admin@example.com --password your-secure-password
-   ```
+     - `GOOGLE_API_KEY` or `OPENAI_API_KEY` for AI features
 
 ## Running the Application
 
-1. **Start the application**:
+1. **Initialize the database and create a demo admin user**:
+   ```
+   python scripts/setup.py --username admin --password your-secure-password --demo-data
+   ```
+
+2. **Start the application**:
    ```
    uvicorn product_evaluator.main:app --reload
    ```
 
-2. **Access the application**:
-   - API server will be running at: http://localhost:8000
-   - API documentation available at: http://localhost:8000/docs
+3. **Access the application**:
+   - Web interface: http://localhost:8000
+   - API documentation: http://localhost:8000/docs
+
+4. **Login with demo credentials**:
+   - Username: `admin`
+   - Password: `your-secure-password` (the one you set in step 1)
 
 ## Docker Setup (Alternative)
 
@@ -87,40 +79,143 @@ If you prefer using Docker:
    docker-compose up -d
    ```
 
-4. **Create an admin user inside the container**:
+4. **Initialize the database and create a demo admin user**:
    ```
-   docker-compose exec app python scripts/create_admin.py --username admin --email admin@example.com --password your-secure-password --db-url postgresql://postgres:postgres@db:5432/product_evaluator
+   docker-compose exec app python scripts/setup.py --username admin --password your-secure-password --demo-data
    ```
 
 5. **Access the application**:
-   - API server will be running at: http://localhost:8000
-   - API documentation available at: http://localhost:8000/docs
+   - Web interface: http://localhost:8000
+   - API documentation: http://localhost:8000/docs
 
-## Using the Application
+## Application Features
 
-1. **Login/Register**:
-   - Use the `/api/auth/register` endpoint to create a new user
-   - Use the `/api/auth/token` endpoint to login and get an access token
+### User Management
+- User registration and authentication
+- User profiles with activity tracking
+- Admin capabilities for user management
 
-2. **Add Products**:
-   - Use the `/api/products` endpoint to add products for evaluation
-   - Provide a product URL to automatically extract information
+### Product Management
+- Add products manually or extract data from websites
+- Organize products by categories and vendors
+- View and filter products
 
-3. **Create Evaluations**:
-   - Use the `/api/evaluations` endpoint to create evaluations
-   - Enable AI assistance to get an initial assessment
+### Evaluation System
+- Evaluate products using predefined criteria
+- Score products on a scale of 1-10
+- Add notes and comments to evaluations
 
-4. **View and Update Evaluations**:
-   - Use the GET endpoints to view your evaluations
-   - Use the PUT endpoints to update evaluations
+### AI-Powered Features
+- AI-assisted information gathering from product URLs
+- AI-powered initial assessment against criteria
+- AI-generated evaluation summaries
 
-## API Keys
+## API Usage
 
-The application requires API keys for AI features:
+The application provides a comprehensive REST API:
 
-1. **Google API Key**:
-   - Create an API key in the [Google AI Studio](https://makersuite.google.com/)
-   - Enable the Gemini API
+1. **Authentication**:
+   - `POST /api/auth/register` - Register a new user
+   - `POST /api/auth/token` - Get access token
 
-2. **OpenAI API Key** (Alternative):
-   - Create an API key at [OpenAI](https://platform.openai.com/)
+2. **Products**:
+   - `GET /api/products` - List all products
+   - `POST /api/products` - Create a new product
+   - `GET /api/products/{id}` - Get product details
+   - `PUT /api/products/{id}` - Update a product
+   - `DELETE /api/products/{id}` - Delete a product
+
+3. **Evaluations**:
+   - `GET /api/evaluations` - List all evaluations
+   - `POST /api/evaluations` - Create a new evaluation
+   - `GET /api/evaluations/{id}` - Get evaluation details
+   - `PUT /api/evaluations/{id}` - Update an evaluation
+   - `DELETE /api/evaluations/{id}` - Delete an evaluation
+
+4. **AI Features**:
+   - `POST /api/ai/analyze` - Analyze product against criteria
+   - `POST /api/ai/summarize` - Generate evaluation summary
+
+For complete API documentation, visit http://localhost:8000/docs when the application is running.
+
+## Project Structure
+
+```
+product_evaluator/
+├── api/                # API endpoints
+│   ├── middleware/     # Request middleware
+│   └── routes/         # API route definitions
+├── data/               # Data storage and knowledge base
+│   ├── embeddings/     # Vector embeddings storage
+│   └── knowledge_base/ # Structured knowledge for AI
+├── models/             # Database models
+│   ├── evaluation/     # Evaluation related models
+│   ├── product/        # Product related models
+│   └── user/           # User related models
+├── services/           # Business logic services
+│   ├── ai/             # AI-related services
+│   ├── auth/           # Authentication services
+│   └── extraction/     # Web content extraction
+├── static/             # Static files (CSS, JS)
+│   ├── css/            # CSS files
+│   └── js/             # JavaScript files
+├── ui/                 # User interface
+│   └── templates/      # HTML templates
+├── tests/              # Test suite
+│   ├── integration/    # Integration tests
+│   └── unit/           # Unit tests
+└── utils/              # Utility functions
+```
+
+## AI Integration
+
+The application integrates with AI services for various features:
+
+1. **Content Extraction**:
+   - Uses a combination of libraries to extract relevant information from websites
+   - Cleans and processes the text for AI analysis
+
+2. **Product Analysis**:
+   - Uses AI to analyze products against predefined criteria
+   - Provides suggested scores and assessments
+
+3. **Summary Generation**:
+   - Uses AI to generate comprehensive evaluation summaries
+   - Includes strengths, weaknesses, and recommendations
+
+## Troubleshooting
+
+### Application Won't Start
+- Check that `.env` file is configured correctly
+- Ensure all dependencies are installed
+- Verify database file permissions
+
+### AI Features Not Working
+- Verify API keys are set correctly in `.env`
+- Check logs for API rate limit errors
+- Ensure extracted content is sufficient for analysis
+
+### Database Issues
+- Delete the database file and run the setup script again
+- Check for migration errors in the logs
+
+## Next Steps
+
+After setting up the basic application, you might want to:
+
+1. **Customize Evaluation Criteria**:
+   - Edit `data/knowledge_base/evaluation_criteria.json`
+   - Restart the application to apply changes
+
+2. **Enhance AI Prompts**:
+   - Modify prompt templates in the service files for better results
+   - Experiment with different temperature settings
+
+3. **Add Custom Styling**:
+   - Edit `static/css/custom.css` to match your brand
+   - Update templates with specific design elements
+
+4. **Deploy to Production**:
+   - Set appropriate security settings in `.env`
+   - Configure a proper database like PostgreSQL
+   - Set up HTTPS using a reverse proxy

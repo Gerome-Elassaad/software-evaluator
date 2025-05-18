@@ -1,0 +1,1079 @@
+{% extends "base.html" %}
+
+{% block title %}{{ app_name }} - New Evaluation{% endblock %}
+
+{% block content %}
+<div class="mb-6">
+    <a href="/evaluations" class="text-indigo-600 hover:text-indigo-800 mb-4 inline-block">
+        <i class="fas fa-arrow-left mr-1"></i> Back to Evaluations
+    </a>
+    <h1 class="text-3xl font-bold text-indigo-800 mb-2">Create Evaluation</h1>
+    <p class="text-gray-600">Evaluate a product using predefined criteria or AI analysis.</p>
+</div>
+
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+    <!-- Main Form Column -->
+    <div class="lg:col-span-2">
+        <div class="bg-white p-6 rounded-lg shadow-md mb-6">
+            <div id="form-error" class="hidden bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
+                <span id="form-error-message"></span>
+            </div>
+            
+            <form id="evaluation-form" class="space-y-6">
+                <div>
+                    <label for="evaluation-title" class="block text-gray-700 font-medium mb-2">Evaluation Title *</label>
+                    <input type="text" id="evaluation-title" required
+                           class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                </div>
+                
+                <div id="product-selection-container">
+                    <label for="product-select" class="block text-gray-700 font-medium mb-2">Select Product *</label>
+                    <select id="product-select" required
+                            class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                        <option value="">Select a product to evaluate</option>
+                        <!-- Products will be populated by JavaScript -->
+                    </select>
+                    
+                    <div class="mt-2 text-sm">
+                        <a href="/products" class="text-indigo-600 hover:text-indigo-800">
+                            <i class="fas fa-plus-circle mr-1"></i> Add a new product
+                        </a>
+                    </div>
+                </div>
+                
+                <div id="selected-product-info" class="hidden p-4 bg-gray-50 rounded-lg">
+                    <!-- Selected product info will be populated by JavaScript -->
+                </div>
+                
+                <div>
+                    <div class="flex justify-between items-center mb-2">
+                        <label class="block text-gray-700 font-medium">Evaluation Criteria</label>
+                        <div class="flex items-center">
+                            <div class="tooltip">
+                                <i class="fas fa-info-circle text-indigo-500 mr-3"></i>
+                                <span class="tooltip-text">Score each criterion on a scale of 1-10, where 1 is extremely poor and 10 is excellent.</span>
+                            </div>
+                            <button type="button" id="ai-analysis-button" class="text-indigo-600 hover:text-indigo-800 disabled:opacity-50 disabled:cursor-not-allowed">
+                                <i class="fas fa-magic mr-1"></i> AI Analysis
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <div id="criteria-container" class="space-y-4">
+                        <div class="text-center text-gray-500 py-4">
+                            <div class="inline-block w-8 h-8 border-4 border-indigo-600 border-t-transparent rounded-full animate-spin mb-2"></div>
+                            <p>Loading criteria...</p>
+                        </div>
+                    </div>
+                </div>
+                
+                <div>
+                    <label for="evaluation-notes" class="block text-gray-700 font-medium mb-2">Additional Notes</label>
+                    <textarea id="evaluation-notes" rows="4" 
+                              class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"></textarea>
+                </div>
+                
+                <div class="flex flex-col sm:flex-row sm:justify-between sm:items-center pt-4 border-t">
+                    <div class="mb-4 sm:mb-0">
+                        <div class="flex items-center">
+                            <input type="checkbox" id="use-ai-analysis" class="mr-2">
+                            <label for="use-ai-analysis" class="text-gray-700">
+                                Use AI to analyze the product
+                                <span class="tooltip ml-1">
+                                    <i class="fas fa-info-circle text-indigo-500"></i>
+                                    <span class="tooltip-text">If enabled, AI will analyze the product's extracted content and suggest scores and assessments. Note: This will only work if the product has extracted content from its website.</span>
+                                </span>
+                            </label>
+                        </div>
+                    </div>
+                    
+                    <div class="flex space-x-3">
+                        <button type="button" id="cancel-button" 
+                                class="border border-gray-300 text-gray-700 py-2 px-4 rounded-lg hover:bg-gray-100 transition">
+                            Cancel
+                        </button>
+                        <button type="submit" id="save-button" 
+                                class="bg-indigo-600 text-white py-2 px-4 rounded-lg hover:bg-indigo-700 transition">
+                            <span id="save-text">Save Evaluation</span>
+                            <span id="save-spinner" class="loading hidden"></span>
+                        </button>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+    
+    <!-- Sidebar Column -->
+    <div class="lg:col-span-1">
+        <div class="bg-white p-6 rounded-lg shadow-md mb-6">
+            <h2 class="text-xl font-bold text-indigo-800 mb-4">Overall Score</h2>
+            
+            <div class="text-center mb-6">
+                <div class="inline-block w-32 h-32 rounded-full border-8 border-indigo-100 items-center justify-center">
+                    <span id="overall-score" class="text-4xl font-bold text-indigo-800">-</span>
+                </div>
+            </div>
+            
+            <div id="score-breakdown" class="space-y-3">
+                <p class="text-center text-gray-500">Fill in criteria scores to see the overall score</p>
+            </div>
+        </div>
+        
+        <div class="bg-white p-6 rounded-lg shadow-md mb-6">
+            <h2 class="text-xl font-bold text-indigo-800 mb-4">AI Assistance</h2>
+            
+            <p class="text-gray-600 mb-4">Let AI help you evaluate this product by analyzing its extracted content against your selected criteria.</p>
+            
+            <div id="ai-status" class="mb-4 text-indigo-800">
+                <p id="ai-status-message" class="font-semibold">Select a product to enable AI analysis.</p>
+            </div>
+            
+            <button id="generate-summary-button" disabled
+                    class="w-full bg-indigo-600 text-white py-2 px-4 rounded-lg hover:bg-indigo-700 transition disabled:opacity-50 disabled:cursor-not-allowed mb-2">
+                <i class="fas fa-robot mr-1"></i> Generate AI Summary
+            </button>
+            
+            <p class="text-xs text-gray-500">Note: AI features require product information to be extracted from the product website.</p>
+        </div>
+    </div>
+</div>
+
+<!-- AI Analysis Modal -->
+<div id="ai-modal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+    <div class="bg-white rounded-lg shadow-xl max-w-4xl w-full max-h-[90vh] overflow-y-auto">
+        <div class="p-6 border-b">
+            <div class="flex justify-between items-center">
+                <h2 class="text-2xl font-bold text-indigo-800">AI Analysis</h2>
+                <button id="close-ai-modal-button" class="text-gray-500 hover:text-gray-700">
+                    <i class="fas fa-times text-xl"></i>
+                </button>
+            </div>
+        </div>
+        
+        <div class="p-6">
+            <div id="ai-modal-content">
+                <div class="text-center py-12">
+                    <div class="inline-block w-16 h-16 border-4 border-indigo-600 border-t-transparent rounded-full animate-spin mb-4"></div>
+                    <p class="text-gray-600 text-lg">AI is analyzing the product...</p>
+                    <p class="text-gray-500 mt-2">This may take a few moments.</p>
+                </div>
+            </div>
+        </div>
+        
+        <div class="p-6 border-t bg-gray-50">
+            <div class="flex justify-end">
+                <button id="apply-ai-analysis-button" class="bg-indigo-600 text-white py-2 px-4 rounded-lg hover:bg-indigo-700 transition">
+                    Apply AI Suggestions
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- AI Summary Modal -->
+<div id="summary-modal" class="fixed inset-0 bg-black bg-opacity-50 items-center justify-center z-50 hidden">
+    <div class="bg-white rounded-lg shadow-xl max-w-4xl w-full max-h-[90vh] overflow-y-auto">
+        <div class="p-6 border-b">
+            <div class="flex justify-between items-center">
+                <h2 class="text-2xl font-bold text-indigo-800">AI-Generated Summary</h2>
+                <button id="close-summary-modal-button" class="text-gray-500 hover:text-gray-700">
+                    <i class="fas fa-times text-xl"></i>
+                </button>
+            </div>
+        </div>
+        
+        <div class="p-6">
+            <div id="summary-modal-content">
+                <div class="text-center py-12">
+                    <div class="inline-block w-16 h-16 border-4 border-indigo-600 border-t-transparent rounded-full animate-spin mb-4"></div>
+                    <p class="text-gray-600 text-lg">Generating summary...</p>
+                    <p class="text-gray-500 mt-2">This may take a few moments.</p>
+                </div>
+            </div>
+        </div>
+        
+        <div class="p-6 border-t bg-gray-50">
+            <div class="flex justify-end">
+                <button id="use-summary-button" class="bg-indigo-600 text-white py-2 px-4 rounded-lg hover:bg-indigo-700 transition">
+                    Use This Summary
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    // Check if user is authenticated
+    document.addEventListener('DOMContentLoaded', () => {
+        if (!requireAuth()) return;
+        
+        // Load criteria
+        loadCriteria();
+        
+        // Load products
+        loadProducts();
+        
+        // Check for product_id in URL query params
+        const urlParams = new URLSearchParams(window.location.search);
+        const productId = urlParams.get('product_id');
+        
+        if (productId) {
+            // Set product if specified in URL
+            selectProductById(productId);
+        }
+        
+        // Update overall score when any score input changes
+        document.addEventListener('input', (e) => {
+            if (e.target.classList.contains('score-input')) {
+                updateOverallScore();
+            }
+        });
+    });
+    
+    // Global variables
+    let allProducts = [];
+    let allCriteria = [];
+    let aiAnalysisResults = null;
+    let aiSummary = null;
+    let productHasContent = false;
+    
+    // Event Listeners
+    document.getElementById('product-select').addEventListener('change', handleProductChange);
+    document.getElementById('ai-analysis-button').addEventListener('click', performAIAnalysis);
+    document.getElementById('close-ai-modal-button').addEventListener('click', hideAIModal);
+    document.getElementById('apply-ai-analysis-button').addEventListener('click', applyAIAnalysis);
+    document.getElementById('generate-summary-button').addEventListener('click', generateAISummary);
+    document.getElementById('close-summary-modal-button').addEventListener('click', hideSummaryModal);
+    document.getElementById('use-summary-button').addEventListener('click', useAISummary);
+    document.getElementById('evaluation-form').addEventListener('submit', saveEvaluation);
+    document.getElementById('cancel-button').addEventListener('click', () => window.location.href = '/evaluations');
+    
+    // Load criteria from API
+    async function loadCriteria() {
+        try {
+            const criteria = await API.get('/criteria');
+            allCriteria = criteria;
+            
+            // Display criteria
+            displayCriteria(criteria);
+        } catch (error) {
+            console.error('Error loading criteria:', error);
+            showToast('Failed to load evaluation criteria', 'error');
+            
+            // Show error in criteria container
+            const container = document.getElementById('criteria-container');
+            container.innerHTML = `
+                <div class="text-center text-red-500 py-4">
+                    <i class="fas fa-exclamation-circle text-3xl mb-2"></i>
+                    <p>Failed to load evaluation criteria. Please try refreshing the page.</p>
+                </div>
+            `;
+        }
+    }
+    
+    // Load products from API
+    async function loadProducts() {
+        try {
+            const products = await API.get('/products');
+            allProducts = products;
+            
+            // Populate product select
+            const productSelect = document.getElementById('product-select');
+            
+            // Clear options (except first)
+            while (productSelect.options.length > 1) {
+                productSelect.remove(1);
+            }
+            
+            // Add product options
+            products.forEach(product => {
+                const option = document.createElement('option');
+                option.value = product.id;
+                option.textContent = product.name;
+                productSelect.appendChild(option);
+            });
+        } catch (error) {
+            console.error('Error loading products:', error);
+            showToast('Failed to load products', 'error');
+        }
+    }
+    
+    // Display criteria in form
+    function displayCriteria(criteria) {
+        const container = document.getElementById('criteria-container');
+        
+        // Clear container
+        container.innerHTML = '';
+        
+        // Group criteria by category
+        const categorizedCriteria = {};
+        
+        criteria.forEach(criterion => {
+            const category = criterion.category || 'Uncategorized';
+            
+            if (!categorizedCriteria[category]) {
+                categorizedCriteria[category] = [];
+            }
+            
+            categorizedCriteria[category].push(criterion);
+        });
+        
+        // Add criteria by category
+        Object.entries(categorizedCriteria).forEach(([category, criteriaList]) => {
+            // Create category header
+            const categoryHeader = document.createElement('div');
+            categoryHeader.className = 'pb-2 mb-3 border-b border-gray-200';
+            categoryHeader.innerHTML = `<h3 class="text-lg font-semibold text-indigo-800">${escapeHtml(category)}</h3>`;
+            container.appendChild(categoryHeader);
+            
+            // Create criteria items
+            criteriaList.forEach(criterion => {
+                const criterionDiv = document.createElement('div');
+                criterionDiv.className = 'p-4 border rounded-lg hover:bg-gray-50 transition mb-4';
+                criterionDiv.innerHTML = `
+                    <div class="mb-3">
+                        <div class="flex justify-between">
+                            <label for="criterion-${criterion.id}" class="font-medium text-gray-800">${escapeHtml(criterion.name)}</label>
+                            <span class="text-xs text-gray-500">Weight: ${criterion.weight}x</span>
+                        </div>
+                        <p class="text-gray-600 text-sm mt-1">${escapeHtml(criterion.description || '')}</p>
+                    </div>
+                    
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <div class="md:col-span-2">
+                            <label for="criterion-notes-${criterion.id}" class="block text-sm text-gray-600 mb-1">Notes</label>
+                            <textarea id="criterion-notes-${criterion.id}" 
+                                      class="criterion-notes w-full px-3 py-2 border rounded focus:outline-none focus:ring-1 focus:ring-indigo-500 text-sm" 
+                                      rows="2" data-criterion-id="${criterion.id}"></textarea>
+                        </div>
+                        
+                        <div>
+                            <label for="criterion-${criterion.id}" class="block text-sm text-gray-600 mb-1">Score</label>
+                            <div class="flex items-center">
+                                <input type="number" id="criterion-${criterion.id}" 
+                                       class="score-input w-full px-3 py-2 border rounded focus:outline-none focus:ring-1 focus:ring-indigo-500 text-lg font-semibold text-center" 
+                                       min="1" max="10" data-criterion-id="${criterion.id}" data-weight="${criterion.weight}">
+                                <span class="ml-2 text-gray-500">/10</span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="mt-2 ai-assessment-container hidden" id="ai-assessment-${criterion.id}">
+                        <div class="bg-indigo-50 p-3 rounded-lg border border-indigo-100">
+                            <div class="flex items-start">
+                                <div class="text-indigo-600 mr-2 mt-1">
+                                    <i class="fas fa-robot"></i>
+                                </div>
+                                <div>
+                                    <p class="text-sm text-gray-700 ai-assessment-text"></p>
+                                    <div class="mt-2 flex justify-between items-center">
+                                        <span class="text-xs text-indigo-600">
+                                            <i class="fas fa-magic mr-1"></i> AI suggested score: <span class="font-semibold ai-assessment-score">-</span>/10
+                                        </span>
+                                        <button type="button" class="use-ai-score-button text-xs text-indigo-600 hover:text-indigo-800">
+                                            Use suggested score
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+                
+                container.appendChild(criterionDiv);
+                
+                // Add event listener for "Use suggested score" button
+                const useScoreButton = criterionDiv.querySelector('.use-ai-score-button');
+                useScoreButton.addEventListener('click', () => {
+                    const scoreElement = criterionDiv.querySelector('.ai-assessment-score');
+                    const scoreInput = criterionDiv.querySelector('.score-input');
+                    
+                    if (scoreElement && scoreInput) {
+                        const suggestedScore = scoreElement.textContent;
+                        if (suggestedScore !== '-') {
+                            scoreInput.value = suggestedScore;
+                            updateOverallScore();
+                        }
+                    }
+                });
+            });
+        });
+        
+        // If no criteria found
+        if (criteria.length === 0) {
+            container.innerHTML = `
+                <div class="text-center text-gray-500 py-4">
+                    <p>No evaluation criteria found. Please contact an administrator.</p>
+                </div>
+            `;
+        }
+    }
+    
+    // Select product by ID
+    function selectProductById(productId) {
+        const productSelect = document.getElementById('product-select');
+        productSelect.value = productId;
+        
+        // Trigger change event
+        const event = new Event('change');
+        productSelect.dispatchEvent(event);
+    }
+    
+    // Handle product selection change
+    async function handleProductChange() {
+        const productId = document.getElementById('product-select').value;
+        
+        // Reset AI-related state
+        productHasContent = false;
+        aiAnalysisResults = null;
+        aiSummary = null;
+        
+        // Reset AI buttons
+        document.getElementById('ai-analysis-button').disabled = true;
+        document.getElementById('generate-summary-button').disabled = true;
+        
+        // Reset AI status
+        const aiStatusMessage = document.getElementById('ai-status-message');
+        aiStatusMessage.textContent = productId ? 'Checking AI capabilities...' : 'Select a product to enable AI analysis.';
+        
+        // Clear selected product info
+        const productInfo = document.getElementById('selected-product-info');
+        productInfo.classList.add('hidden');
+        productInfo.innerHTML = '';
+        
+        if (!productId) return;
+        
+        try {
+            // Get product details
+            const product = await API.get(`/products/${productId}`);
+            
+            // Check if product has extracted content
+            productHasContent = !!product.extracted_content && product.extracted_content.length > 100;
+            
+            // Update AI status
+            aiStatusMessage.textContent = productHasContent 
+                ? 'AI analysis available for this product.' 
+                : 'This product does not have extracted content for AI analysis.';
+            
+            // Enable/disable AI buttons
+            document.getElementById('ai-analysis-button').disabled = !productHasContent;
+            document.getElementById('generate-summary-button').disabled = true; // Enable after scores are entered
+            
+            // Display product info
+            productInfo.innerHTML = `
+                <div class="flex items-start">
+                    <div class="flex-grow">
+                        <h3 class="font-semibold text-gray-800">${escapeHtml(product.name)}</h3>
+                        <p class="text-sm text-gray-600 mt-1">${escapeHtml(product.description || 'No description available.')}</p>
+                        
+                        <div class="flex flex-wrap gap-x-4 gap-y-1 mt-2 text-sm">
+                            ${product.category ? `<span class="text-gray-600"><i class="fas fa-tag mr-1"></i> ${escapeHtml(product.category)}</span>` : ''}
+                            ${product.vendor ? `<span class="text-gray-600"><i class="fas fa-building mr-1"></i> ${escapeHtml(product.vendor)}</span>` : ''}
+                            ${product.website_url ? `<a href="${product.website_url}" target="_blank" class="text-indigo-600 hover:text-indigo-800"><i class="fas fa-external-link-alt mr-1"></i> Website</a>` : ''}
+                        </div>
+                    </div>
+                    
+                    <div class="text-right text-sm">
+                        <div class="text-amber-600 font-semibold">
+                            ${product.average_rating ? `${product.average_rating.toFixed(1)}/10` : 'No ratings'}
+                        </div>
+                        <div class="text-gray-500">
+                            ${product.evaluation_count} evaluation${product.evaluation_count !== 1 ? 's' : ''}
+                        </div>
+                        ${productHasContent ? `
+                            <div class="mt-1 text-green-600">
+                                <i class="fas fa-check-circle mr-1"></i> AI-ready
+                            </div>
+                        ` : `
+                            <div class="mt-1 text-gray-500">
+                                <i class="fas fa-robot mr-1"></i> No AI content
+                            </div>
+                        `}
+                    </div>
+                </div>
+            `;
+            
+            productInfo.classList.remove('hidden');
+        } catch (error) {
+            console.error('Error loading product details:', error);
+            showToast('Failed to load product details', 'error');
+        }
+    }
+    
+    // Perform AI analysis
+    async function performAIAnalysis() {
+        const productId = document.getElementById('product-select').value;
+        
+        if (!productId || !productHasContent) {
+            showToast('AI analysis requires a product with extracted content', 'warning');
+            return;
+        }
+        
+        // Get criterion IDs
+        const criterionIds = allCriteria.map(c => c.id);
+        
+        // Show AI modal with loading state
+        document.getElementById('ai-modal').classList.remove('hidden');
+        document.getElementById('ai-modal-content').innerHTML = `
+            <div class="text-center py-12">
+                <div class="inline-block w-16 h-16 border-4 border-indigo-600 border-t-transparent rounded-full animate-spin mb-4"></div>
+                <p class="text-gray-600 text-lg">AI is analyzing the product...</p>
+                <p class="text-gray-500 mt-2">This may take a few moments.</p>
+            </div>
+        `;
+        
+        try {
+            // Call AI analysis API
+            const response = await API.post('/ai/analyze', {
+                product_id: productId,
+                criteria_ids: criterionIds
+            });
+            
+            // Store results
+            aiAnalysisResults = response.criteria_analyses;
+            
+            // Display results in modal
+            displayAIAnalysisResults(aiAnalysisResults);
+        } catch (error) {
+            console.error('AI analysis error:', error);
+            
+            // Show error in modal
+            document.getElementById('ai-modal-content').innerHTML = `
+                <div class="text-center py-12">
+                    <div class="text-red-500 text-5xl mb-4">
+                        <i class="fas fa-exclamation-circle"></i>
+                    </div>
+                    <p class="text-red-600 text-lg font-semibold">AI Analysis Failed</p>
+                    <p class="text-gray-600 mt-2">${error.message || 'An error occurred during analysis. Please try again.'}</p>
+                </div>
+            `;
+            
+            // Disable apply button
+            document.getElementById('apply-ai-analysis-button').disabled = true;
+        }
+    }
+    
+    // Display AI analysis results in modal
+    function displayAIAnalysisResults(results) {
+        const container = document.getElementById('ai-modal-content');
+        container.innerHTML = '';
+        
+        let hasResults = false;
+        
+        // Create results content
+        const content = document.createElement('div');
+        content.className = 'space-y-6';
+        
+        // Add intro text
+        const intro = document.createElement('div');
+        intro.innerHTML = `
+            <p class="mb-4">The AI has analyzed the product based on its extracted content. Below are the assessments for each criterion.</p>
+        `;
+        content.appendChild(intro);
+        
+        // Process each criterion
+        for (const criterion of allCriteria) {
+            const criterionId = criterion.id;
+            const analysis = results[criterionId];
+            
+            if (!analysis || analysis.error) {
+                continue;
+            }
+            
+            hasResults = true;
+            
+            const criterionDiv = document.createElement('div');
+            criterionDiv.className = 'border rounded-lg p-4';
+            criterionDiv.innerHTML = `
+                <div class="flex justify-between items-start mb-2">
+                    <h3 class="font-semibold text-gray-800">${escapeHtml(criterion.name)}</h3>
+                    ${analysis.suggested_score ? `
+                        <span class="bg-indigo-100 text-indigo-800 px-2 py-1 rounded-lg text-sm font-medium">
+                            Score: ${analysis.suggested_score}/10
+                        </span>
+                    ` : ''}
+                </div>
+                
+                <div class="text-gray-700">
+                    ${formatAnalysisText(analysis.analysis)}
+                </div>
+            `;
+            
+            content.appendChild(criterionDiv);
+        }
+        
+        // If no results
+        if (!hasResults) {
+            content.innerHTML = `
+                <div class="text-center py-8">
+                    <p class="text-gray-600">The AI was unable to provide any meaningful analysis for this product.</p>
+                    <p class="text-gray-500 mt-2">This might be due to insufficient extracted content or the product not being a good match for the criteria.</p>
+                </div>
+            `;
+            
+            // Disable apply button
+            document.getElementById('apply-ai-analysis-button').disabled = true;
+        } else {
+            // Enable apply button
+            document.getElementById('apply-ai-analysis-button').disabled = false;
+        }
+        
+        container.appendChild(content);
+    }
+    
+    // Hide AI modal
+    function hideAIModal() {
+        document.getElementById('ai-modal').classList.add('hidden');
+    }
+    
+    // Apply AI analysis results to form
+    function applyAIAnalysis() {
+        if (!aiAnalysisResults) {
+            hideAIModal();
+            return;
+        }
+        
+        // Apply results to form
+        for (const criterion of allCriteria) {
+            const criterionId = criterion.id;
+            const analysis = aiAnalysisResults[criterionId];
+            
+            if (!analysis || analysis.error) {
+                continue;
+            }
+            
+            // Update assessment container
+            const assessmentContainer = document.getElementById(`ai-assessment-${criterionId}`);
+            const assessmentText = assessmentContainer.querySelector('.ai-assessment-text');
+            const assessmentScore = assessmentContainer.querySelector('.ai-assessment-score');
+            
+            if (assessmentContainer && assessmentText && assessmentScore) {
+                assessmentContainer.classList.remove('hidden');
+                assessmentText.textContent = analysis.analysis;
+                assessmentScore.textContent = analysis.suggested_score || '-';
+            }
+            
+            // If suggested score is available, set input value
+            if (analysis.suggested_score) {
+                const scoreInput = document.getElementById(`criterion-${criterionId}`);
+                if (scoreInput && !scoreInput.value) {
+                    scoreInput.value = analysis.suggested_score;
+                }
+            }
+        }
+        
+        // Update overall score
+        updateOverallScore();
+        
+        // Enable generate summary button if scores are entered
+        checkEnableSummaryButton();
+        
+        // Hide modal
+        hideAIModal();
+        
+        // Show toast
+        showToast('AI analysis applied', 'success');
+    }
+    
+    // Generate AI summary
+    async function generateAISummary() {
+        const evaluationId = getCurrentEvaluationData().id;
+        
+        if (evaluationId) {
+            // Using existing evaluation
+            performSummaryGeneration(evaluationId);
+            return;
+        }
+        
+        // Check if all required fields are filled
+        const title = document.getElementById('evaluation-title').value;
+        const productId = document.getElementById('product-select').value;
+        
+        if (!title || !productId) {
+            showToast('Please fill in the required fields first', 'warning');
+            return;
+        }
+        
+        // Check if scores are entered
+        const hasScores = document.querySelectorAll('.score-input[value]').length > 0;
+        
+        if (!hasScores) {
+            showToast('Please enter scores for at least one criterion', 'warning');
+            return;
+        }
+        
+        // Save the evaluation first, then generate summary
+        saveEvaluationAndGenerateSummary();
+    }
+    
+    // Save evaluation and generate summary
+    async function saveEvaluationAndGenerateSummary() {
+        try {
+            // Save evaluation
+            const evaluationData = getCurrentEvaluationData();
+            
+            // Show loading state for save button
+            const saveButton = document.getElementById('save-button');
+            const saveText = document.getElementById('save-text');
+            const saveSpinner = document.getElementById('save-spinner');
+            
+            saveButton.disabled = true;
+            saveText.classList.add('hidden');
+            saveSpinner.classList.remove('hidden');
+            
+            // Create evaluation
+            const response = await API.post('/evaluations', evaluationData);
+            
+            // Reset button
+            saveButton.disabled = false;
+            saveText.classList.remove('hidden');
+            saveSpinner.classList.add('hidden');
+            
+            // Now generate summary for the new evaluation
+            performSummaryGeneration(response.id);
+        } catch (error) {
+            console.error('Error saving evaluation:', error);
+            showToast('Failed to save evaluation', 'error');
+            
+            // Reset button
+            const saveButton = document.getElementById('save-button');
+            const saveText = document.getElementById('save-text');
+            const saveSpinner = document.getElementById('save-spinner');
+            
+            saveButton.disabled = false;
+            saveText.classList.remove('hidden');
+            saveSpinner.classList.add('hidden');
+        }
+    }
+    
+    // Perform summary generation
+    async function performSummaryGeneration(evaluationId) {
+        // Show summary modal with loading state
+        document.getElementById('summary-modal').classList.remove('hidden');
+        document.getElementById('summary-modal-content').innerHTML = `
+            <div class="text-center py-12">
+                <div class="inline-block w-16 h-16 border-4 border-indigo-600 border-t-transparent rounded-full animate-spin mb-4"></div>
+                <p class="text-gray-600 text-lg">Generating summary...</p>
+                <p class="text-gray-500 mt-2">This may take a few moments.</p>
+            </div>
+        `;
+        
+        try {
+            // Call AI summary API
+            const response = await API.post('/ai/summarize', {
+                evaluation_id: evaluationId,
+                include_recommendations: true
+            });
+            
+            // Store summary
+            aiSummary = response.summary;
+            
+            // Display summary in modal
+            document.getElementById('summary-modal-content').innerHTML = `
+                <div>
+                    <h3 class="text-lg font-semibold text-indigo-800 mb-4">Summary</h3>
+                    <div class="bg-gray-50 p-4 rounded-lg border border-gray-200">
+                        ${formatSummaryText(response.summary)}
+                    </div>
+                </div>
+            `;
+            
+            // Enable use button
+            document.getElementById('use-summary-button').disabled = false;
+        } catch (error) {
+            console.error('Summary generation error:', error);
+            
+            // Show error in modal
+            document.getElementById('summary-modal-content').innerHTML = `
+                <div class="text-center py-12">
+                    <div class="text-red-500 text-5xl mb-4">
+                        <i class="fas fa-exclamation-circle"></i>
+                    </div>
+                    <p class="text-red-600 text-lg font-semibold">Summary Generation Failed</p>
+                    <p class="text-gray-600 mt-2">${error.message || 'An error occurred during summary generation. Please try again.'}</p>
+                </div>
+            `;
+            
+            // Disable use button
+            document.getElementById('use-summary-button').disabled = true;
+        }
+    }
+    
+    // Hide summary modal
+    function hideSummaryModal() {
+        document.getElementById('summary-modal').classList.add('hidden');
+    }
+    
+    // Use AI summary
+    function useAISummary() {
+        if (!aiSummary) {
+            hideSummaryModal();
+            return;
+        }
+        
+        // Set summary as notes
+        document.getElementById('evaluation-notes').value = aiSummary;
+        
+        // Hide modal
+        hideSummaryModal();
+        
+        // Show toast
+        showToast('Summary added to notes', 'success');
+    }
+    
+    // Update overall score
+    function updateOverallScore() {
+        const scoreInputs = document.querySelectorAll('.score-input');
+        let totalWeightedScore = 0;
+        let totalWeight = 0;
+        let scoresCount = 0;
+        
+        // Calculate weighted average
+        scoreInputs.forEach(input => {
+            const score = parseInt(input.value, 10);
+            const weight = parseInt(input.dataset.weight, 10) || 1;
+            
+            if (!isNaN(score)) {
+                totalWeightedScore += score * weight;
+                totalWeight += weight;
+                scoresCount++;
+            }
+        });
+        
+        // Update overall score display
+        const overallScoreElement = document.getElementById('overall-score');
+        
+        if (scoresCount > 0 && totalWeight > 0) {
+            const weightedAverage = totalWeightedScore / totalWeight;
+            overallScoreElement.textContent = weightedAverage.toFixed(1);
+            
+            // Update score breakdown
+            updateScoreBreakdown(scoreInputs);
+            
+            // Enable generate summary button
+            checkEnableSummaryButton();
+        } else {
+            overallScoreElement.textContent = '-';
+            
+            // Reset score breakdown
+            document.getElementById('score-breakdown').innerHTML = `
+                <p class="text-center text-gray-500">Fill in criteria scores to see the overall score</p>
+            `;
+            
+            // Disable generate summary button
+            document.getElementById('generate-summary-button').disabled = true;
+        }
+    }
+    
+    // Update score breakdown
+    function updateScoreBreakdown(scoreInputs) {
+        const breakdownContainer = document.getElementById('score-breakdown');
+        breakdownContainer.innerHTML = '';
+        
+        // Create sorted array of scores with criteria info
+        const scores = [];
+        
+        scoreInputs.forEach(input => {
+            const score = parseInt(input.value, 10);
+            
+            if (!isNaN(score)) {
+                const criterionId = input.dataset.criterionId;
+                const criterion = allCriteria.find(c => c.id === criterionId);
+                
+                if (criterion) {
+                    scores.push({
+                        name: criterion.name,
+                        score: score,
+                        weight: parseInt(criterion.weight, 10) || 1
+                    });
+                }
+            }
+        });
+        
+        // Sort by score (highest first)
+        scores.sort((a, b) => b.score - a.score);
+        
+        // Create breakdown items
+        if (scores.length > 0) {
+            scores.forEach(item => {
+                const div = document.createElement('div');
+                div.className = 'flex justify-between items-center';
+                div.innerHTML = `
+                    <span class="text-gray-700">${escapeHtml(item.name)}</span>
+                    <div class="flex items-center">
+                        <span class="font-semibold ${getScoreColorClass(item.score)}">${item.score}</span>
+                        <span class="text-gray-400 ml-1 text-xs">${item.weight > 1 ? `(${item.weight}x)` : ''}</span>
+                    </div>
+                `;
+                breakdownContainer.appendChild(div);
+            });
+        } else {
+            breakdownContainer.innerHTML = `
+                <p class="text-center text-gray-500">Fill in criteria scores to see the overall score</p>
+            `;
+        }
+    }
+    
+    // Check if summary button should be enabled
+    function checkEnableSummaryButton() {
+        const productId = document.getElementById('product-select').value;
+        
+        // Enable if product has content and scores are entered
+        document.getElementById('generate-summary-button').disabled = !(
+            productHasContent && 
+            document.getElementById('overall-score').textContent !== '-'
+        );
+    }
+    
+    // Save evaluation
+    async function saveEvaluation(e) {
+        e.preventDefault();
+        
+        // Get evaluation data
+        const evaluationData = getCurrentEvaluationData();
+        
+        // Validate required fields
+        if (!evaluationData.title || !evaluationData.product_id) {
+            // Show error message
+            const errorElement = document.getElementById('form-error');
+            const errorMessage = document.getElementById('form-error-message');
+            
+            errorMessage.textContent = 'Please fill in all required fields.';
+            errorElement.classList.remove('hidden');
+            
+            // Scroll to error
+            errorElement.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            return;
+        }
+        
+        // Hide error message
+        document.getElementById('form-error').classList.add('hidden');
+        
+        // Show loading state
+        const saveButton = document.getElementById('save-button');
+        const saveText = document.getElementById('save-text');
+        const saveSpinner = document.getElementById('save-spinner');
+        
+        saveButton.disabled = true;
+        saveText.classList.add('hidden');
+        saveSpinner.classList.remove('hidden');
+        
+        try {
+            // Create evaluation
+            const response = await API.post('/evaluations', evaluationData);
+            
+            // Show success message
+            showToast('Evaluation saved successfully', 'success');
+            
+            // Redirect to evaluation view
+            window.location.href = `/evaluations/${response.id}`;
+        } catch (error) {
+            console.error('Error saving evaluation:', error);
+            
+            // Show error message
+            const errorElement = document.getElementById('form-error');
+            const errorMessage = document.getElementById('form-error-message');
+            
+            errorMessage.textContent = error.message || 'Failed to save evaluation. Please try again.';
+            errorElement.classList.remove('hidden');
+            
+            // Scroll to error
+            errorElement.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            
+            // Reset button
+            saveButton.disabled = false;
+            saveText.classList.remove('hidden');
+            saveSpinner.classList.add('hidden');
+        }
+    }
+    
+    // Get current evaluation data from form
+    function getCurrentEvaluationData() {
+        const title = document.getElementById('evaluation-title').value;
+        const productId = document.getElementById('product-select').value;
+        const notes = document.getElementById('evaluation-notes').value;
+        const useAI = document.getElementById('use-ai-analysis').checked;
+        
+        // Get criteria evaluations
+        const criteriaEvaluations = [];
+        
+        document.querySelectorAll('.score-input').forEach(input => {
+            const criterionId = input.dataset.criterionId;
+            const score = parseInt(input.value, 10) || null;
+            
+            if (criterionId) {
+                const notesElement = document.getElementById(`criterion-notes-${criterionId}`);
+                const notes = notesElement ? notesElement.value : '';
+                
+                criteriaEvaluations.push({
+                    criterion_id: criterionId,
+                    score: score,
+                    notes: notes || undefined
+                });
+            }
+        });
+        
+        return {
+            title,
+            product_id: productId,
+            notes: notes || undefined,
+            criteria_evaluations: criteriaEvaluations,
+            use_ai_analysis: useAI
+        };
+    }
+    
+    // Helper function to get score color class
+    function getScoreColorClass(score) {
+        if (score >= 8) return 'text-green-600';
+        if (score >= 6) return 'text-amber-600';
+        if (score >= 4) return 'text-orange-600';
+        return 'text-red-600';
+    }
+    
+    // Helper function to format analysis text
+    function formatAnalysisText(text) {
+        if (!text) return '';
+        
+        // Split into paragraphs
+        const paragraphs = text.split(/\n\s*\n/);
+        
+        // Format paragraphs
+        return paragraphs
+            .filter(p => p.trim().length > 0)
+            .map(p => `<p class="mb-2">${escapeHtml(p.trim())}</p>`)
+            .join('');
+    }
+    
+    // Helper function to format summary text
+    function formatSummaryText(text) {
+        if (!text) return '';
+        
+        // Replace headers (# Header) with styled headers
+        text = text.replace(/^#\s+(.+)$/gm, '<h3 class="font-semibold text-indigo-800 text-lg mt-4 mb-2">$1</h3>');
+        text = text.replace(/^##\s+(.+)$/gm, '<h4 class="font-semibold text-indigo-700 mt-3 mb-1">$1</h4>');
+        
+        // Split into paragraphs
+        const paragraphs = text.split(/\n\s*\n/);
+        
+        // Format paragraphs (skip those that were converted to headers)
+        return paragraphs
+            .map(p => {
+                if (p.startsWith('<h')) return p;
+                if (p.trim().length === 0) return '';
+                return `<p class="mb-2">${escapeHtml(p.trim())}</p>`;
+            })
+            .join('');
+    }
+    
+    // Helper function to escape HTML
+    function escapeHtml(text) {
+        if (!text) return '';
+        
+        const div = document.createElement('div');
+        div.textContent = text;
+        return div.innerHTML;
+    }
+</script>
+{% endblock %}

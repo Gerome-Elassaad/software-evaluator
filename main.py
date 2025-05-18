@@ -47,17 +47,6 @@ app.add_middleware(
 )
 
 
-# Add authentication middleware
-app.add_middleware(AuthMiddleware)
-
-
-# Add request logging middleware
-@app.middleware("http")
-async def request_middleware(request: Request, call_next):
-    """Log HTTP requests and responses."""
-    return await log_request_middleware(request, call_next)
-
-
 # Exception handlers
 @app.exception_handler(Exception)
 async def global_exception_handler(request: Request, exc: Exception):
@@ -69,10 +58,21 @@ async def global_exception_handler(request: Request, exc: Exception):
     )
 
 
-# Include routers
+# Add request logging middleware
+@app.middleware("http")
+async def request_middleware(request: Request, call_next):
+    """Log HTTP requests and responses."""
+    return await log_request_middleware(request, call_next)
+
+
+# Include API routers
 app.include_router(user_routes.router, prefix="/api", tags=["users"])
 app.include_router(product_routes.router, prefix="/api", tags=["products"])
 app.include_router(evaluation_routes.router, prefix="/api", tags=["evaluations"])
+
+# Include web routes (HTML templates)
+from product_evaluator.api.routes import web_routes
+app.include_router(web_routes.router)
 
 
 # Serve static files
@@ -80,17 +80,8 @@ static_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "static")
 os.makedirs(static_dir, exist_ok=True)
 app.mount("/static", StaticFiles(directory=static_dir), name="static")
 
-
-# Root route
-@app.get("/")
-async def root():
-    """Root endpoint."""
-    return {
-        "name": settings.APP_NAME,
-        "version": "0.1.0",
-        "status": "running",
-        "environment": settings.APP_ENV,
-    }
+# Add authentication middleware (after mounting static files)
+app.add_middleware(AuthMiddleware)
 
 
 # Run the app

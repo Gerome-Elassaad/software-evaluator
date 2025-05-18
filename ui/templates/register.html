@@ -1,0 +1,131 @@
+{% extends "base.html" %}
+
+{% block title %}{{ app_name }} - Register{% endblock %}
+
+{% block content %}
+<div class="max-w-md mx-auto bg-white p-8 rounded-lg shadow-lg">
+    <h1 class="text-2xl font-bold text-center text-indigo-800 mb-6">Create an Account</h1>
+    
+    <div id="error-alert" class="hidden bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
+        <span id="error-message"></span>
+    </div>
+    
+    <form id="register-form" class="space-y-4">
+        <div>
+            <label for="username" class="block text-gray-700 font-medium mb-2">Username</label>
+            <input type="text" id="username" name="username" required minlength="3" maxlength="50"
+                   class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500">
+            <p class="text-sm text-gray-500 mt-1">3-50 characters, no spaces.</p>
+        </div>
+        
+        <div>
+            <label for="email" class="block text-gray-700 font-medium mb-2">Email</label>
+            <input type="email" id="email" name="email" required
+                   class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500">
+        </div>
+        
+        <div>
+            <label for="full_name" class="block text-gray-700 font-medium mb-2">Full Name (Optional)</label>
+            <input type="text" id="full_name" name="full_name"
+                   class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500">
+        </div>
+        
+        <div>
+            <label for="password" class="block text-gray-700 font-medium mb-2">Password</label>
+            <input type="password" id="password" name="password" required minlength="8"
+                   class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500">
+            <p class="text-sm text-gray-500 mt-1">Minimum 8 characters.</p>
+        </div>
+        
+        <div>
+            <label for="confirm_password" class="block text-gray-700 font-medium mb-2">Confirm Password</label>
+            <input type="password" id="confirm_password" name="confirm_password" required
+                   class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500">
+        </div>
+        
+        <div>
+            <button type="submit" id="register-button" class="w-full bg-indigo-600 text-white py-2 px-4 rounded-lg hover:bg-indigo-700 transition">
+                <span id="register-text">Create Account</span>
+                <span id="register-spinner" class="loading hidden"></span>
+            </button>
+        </div>
+    </form>
+    
+    <div class="mt-6 text-center">
+        <p class="text-gray-600">Already have an account? <a href="/login" class="text-indigo-600 hover:text-indigo-800">Login</a></p>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    // Check if user is already logged in
+    document.addEventListener('DOMContentLoaded', () => {
+        redirectIfAuthenticated();
+    });
+    
+    // Handle register form submission
+    document.getElementById('register-form').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        
+        // Get form data
+        const username = document.getElementById('username').value;
+        const email = document.getElementById('email').value;
+        const fullName = document.getElementById('full_name').value;
+        const password = document.getElementById('password').value;
+        const confirmPassword = document.getElementById('confirm_password').value;
+        
+        // Validate passwords match
+        if (password !== confirmPassword) {
+            document.getElementById('error-message').textContent = 'Passwords do not match.';
+            document.getElementById('error-alert').classList.remove('hidden');
+            return;
+        }
+        
+        // Show loading state
+        const registerButton = document.getElementById('register-button');
+        const registerText = document.getElementById('register-text');
+        const registerSpinner = document.getElementById('register-spinner');
+        const errorAlert = document.getElementById('error-alert');
+        const errorMessage = document.getElementById('error-message');
+        
+        registerButton.disabled = true;
+        registerText.classList.add('hidden');
+        registerSpinner.classList.remove('hidden');
+        errorAlert.classList.add('hidden');
+        
+        try {
+            // Call register API
+            await API.post('/auth/register', {
+                username,
+                email,
+                password,
+                full_name: fullName || undefined
+            });
+            
+            // After registration, log the user in
+            const formData = new FormData();
+            formData.append('username', username);
+            formData.append('password', password);
+            
+            const response = await API.postForm('/auth/token', formData);
+            
+            // Save auth token and user info
+            localStorage.setItem('auth_token', response.access_token);
+            localStorage.setItem('user_info', JSON.stringify(response.user));
+            
+            // Redirect to home page
+            window.location.href = '/';
+        } catch (error) {
+            // Show error message
+            errorMessage.textContent = error.message || 'Registration failed. Please try again.';
+            errorAlert.classList.remove('hidden');
+            
+            // Reset button
+            registerButton.disabled = false;
+            registerText.classList.remove('hidden');
+            registerSpinner.classList.add('hidden');
+        }
+    });
+</script>
+{% endblock %}

@@ -1,0 +1,127 @@
+{% extends "base.html" %}
+
+{% block title %}{{ app_name }} - Home{% endblock %}
+
+{% block content %}
+<div class="text-center">
+    <h1 class="text-4xl font-bold text-indigo-800 mb-4">Welcome to {{ app_name }}</h1>
+    <p class="text-xl text-gray-600 mb-8">AI-powered product evaluation tool for software developers and founders</p>
+    
+    <div class="flex flex-col md:flex-row justify-center gap-6 mb-12">
+        <div class="bg-white p-6 rounded-lg shadow-lg max-w-sm">
+            <div class="text-indigo-600 text-5xl mb-4">
+                <i class="fas fa-search"></i>
+            </div>
+            <h3 class="text-xl font-semibold mb-2">Find Products</h3>
+            <p class="text-gray-600 mb-4">Discover and add software products for evaluation. Simply provide a URL and let our AI extract the content.</p>
+            <a href="/products" class="inline-block bg-indigo-600 text-white py-2 px-4 rounded hover:bg-indigo-700 transition">Browse Products</a>
+        </div>
+        
+        <div class="bg-white p-6 rounded-lg shadow-lg max-w-sm">
+            <div class="text-indigo-600 text-5xl mb-4">
+                <i class="fas fa-clipboard-check"></i>
+            </div>
+            <h3 class="text-xl font-semibold mb-2">Evaluate</h3>
+            <p class="text-gray-600 mb-4">Rate products using standardized criteria. Our AI can analyze product content and provide initial assessments.</p>
+            <a href="/evaluations" class="inline-block bg-indigo-600 text-white py-2 px-4 rounded hover:bg-indigo-700 transition">View Evaluations</a>
+        </div>
+        
+        <div class="bg-white p-6 rounded-lg shadow-lg max-w-sm">
+            <div class="text-indigo-600 text-5xl mb-4">
+                <i class="fas fa-brain"></i>
+            </div>
+            <h3 class="text-xl font-semibold mb-2">AI Insights</h3>
+            <p class="text-gray-600 mb-4">Get AI-powered summaries and recommendations based on evaluation data, helping you make informed decisions.</p>
+            <a href="/evaluations/new" class="inline-block bg-indigo-600 text-white py-2 px-4 rounded hover:bg-indigo-700 transition">New Evaluation</a>
+        </div>
+    </div>
+    
+    <div class="bg-indigo-50 p-8 rounded-lg shadow-sm mb-12">
+        <h2 class="text-2xl font-bold text-indigo-800 mb-4">How It Works</h2>
+        <div class="flex flex-col md:flex-row justify-center items-start gap-8">
+            <div class="flex-1">
+                <div class="bg-indigo-100 rounded-full w-12 h-12 flex items-center justify-center mx-auto mb-4">
+                    <span class="text-indigo-800 font-bold">1</span>
+                </div>
+                <h3 class="text-lg font-semibold mb-2">Add Products</h3>
+                <p class="text-gray-600">Enter product details or provide a URL to automatically extract information.</p>
+            </div>
+            
+            <div class="flex-1">
+                <div class="bg-indigo-100 rounded-full w-12 h-12 flex items-center justify-center mx-auto mb-4">
+                    <span class="text-indigo-800 font-bold">2</span>
+                </div>
+                <h3 class="text-lg font-semibold mb-2">Create Evaluations</h3>
+                <p class="text-gray-600">Select a product and criteria, then rate it manually or with AI assistance.</p>
+            </div>
+            
+            <div class="flex-1">
+                <div class="bg-indigo-100 rounded-full w-12 h-12 flex items-center justify-center mx-auto mb-4">
+                    <span class="text-indigo-800 font-bold">3</span>
+                </div>
+                <h3 class="text-lg font-semibold mb-2">Review Results</h3>
+                <p class="text-gray-600">Get comprehensive summaries, scores, and insights to make informed decisions.</p>
+            </div>
+        </div>
+    </div>
+    
+    <div id="stats-section" class="mb-12">
+        <h2 class="text-2xl font-bold text-indigo-800 mb-6">Platform Statistics</h2>
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div class="bg-white p-6 rounded-lg shadow-lg">
+                <div class="text-3xl font-bold text-indigo-600 mb-2" id="product-count">--</div>
+                <p class="text-gray-600">Products</p>
+            </div>
+            
+            <div class="bg-white p-6 rounded-lg shadow-lg">
+                <div class="text-3xl font-bold text-indigo-600 mb-2" id="evaluation-count">--</div>
+                <p class="text-gray-600">Evaluations</p>
+            </div>
+            
+            <div class="bg-white p-6 rounded-lg shadow-lg">
+                <div class="text-3xl font-bold text-indigo-600 mb-2" id="user-count">--</div>
+                <p class="text-gray-600">Users</p>
+            </div>
+        </div>
+    </div>
+    
+    <div class="bg-indigo-600 text-white p-8 rounded-lg">
+        <h2 class="text-2xl font-bold mb-4">Ready to get started?</h2>
+        <p class="text-lg mb-6">Create an account to start evaluating products with AI assistance.</p>
+        <div class="space-x-4">
+            <a href="/register" class="bg-white text-indigo-600 py-2 px-6 rounded-lg font-semibold hover:bg-indigo-100 transition">Sign Up</a>
+            <a href="/login" class="border border-white text-white py-2 px-6 rounded-lg font-semibold hover:bg-indigo-700 transition">Login</a>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    // Load stats from API if user is authenticated
+    document.addEventListener('DOMContentLoaded', async () => {
+        try {
+            const token = localStorage.getItem('auth_token');
+            if (token) {
+                // Get product count
+                const products = await API.get('/products');
+                document.getElementById('product-count').textContent = products.length;
+                
+                // Get evaluation count
+                const evaluations = await API.get('/evaluations');
+                document.getElementById('evaluation-count').textContent = evaluations.length;
+                
+                // We don't have a public API for user count, so just show current user
+                document.getElementById('user-count').textContent = '1+';
+            } else {
+                // Default values for logged-out users
+                document.getElementById('product-count').textContent = '0';
+                document.getElementById('evaluation-count').textContent = '0';
+                document.getElementById('user-count').textContent = '0';
+            }
+        } catch (error) {
+            console.error('Error loading stats:', error);
+        }
+    });
+</script>
+{% endblock %}
