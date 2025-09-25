@@ -15,7 +15,7 @@ aiofiles==23.2.1
 google-generativeai==0.3.1
 google-cloud-language==2.11.0
 openai==0.28.0
-langchain==0.0.267
+langchain==0.2.5
 beautifulsoup4==4.12.2
 requests==2.31.0
 trafilatura==1.6.1
