@@ -17,7 +17,7 @@ google-cloud-language==2.11.0
 openai==0.28.0
 langchain==0.2.5
 beautifulsoup4==4.12.2
-requests==2.31.0
+requests==2.32.4
 trafilatura==1.6.1
 
 # Vector database and embeddings
