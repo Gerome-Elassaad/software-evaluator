@@ -55,8 +55,8 @@ Product Evaluator is a comprehensive tool designed to help software developers a
 ### Standard Installation
 ```bash
 # Clone the repository
-git clone https://github.com/yourusername/product-evaluator.git
-cd product-evaluator
+git clone https://github.com/Gerome-Elassaad/software-evaluator.git
+cd software-evaluator
 
 # Create a virtual environment
 python -m venv venv
